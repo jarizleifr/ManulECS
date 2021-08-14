@@ -1,73 +1,77 @@
-#pragma warning disable CS0660
-
 using System;
 
 namespace ManulECS {
   public struct FlagEnum : IEquatable<FlagEnum> {
-    private uint[] bitarray;
+    private uint u1, u2, u3, u4;
 
-    public FlagEnum(Flag flag) {
-      bitarray = null;
-      this[flag] = true;
-    }
-    public FlagEnum(Flag f1, Flag f2) {
-      bitarray = null;
-      this[f1] = true;
-      this[f2] = true;
-    }
-    public FlagEnum(Flag f1, Flag f2, Flag f3) {
-      bitarray = null;
-      this[f1] = true;
-      this[f2] = true;
-      this[f3] = true;
-    }
-    public FlagEnum(Flag f1, Flag f2, Flag f3, Flag f4) {
-      bitarray = null;
-      this[f1] = true;
-      this[f2] = true;
-      this[f3] = true;
-      this[f4] = true;
+    public FlagEnum(params Flag[] flags) {
+      (u1, u2, u3, u4) = (0, 0, 0, 0);
+      foreach (var flag in flags) {
+        this[flag] = true;
+      }
     }
 
-    // TODO: This is pretty heavy performance-wise, it gets run A LOT
     public bool this[Flag flag] {
-      get => bitarray != null && flag.index < bitarray.Length && (bitarray[flag.index] & flag.bits) > 0;
+      get => flag.index switch {
+        0 => (u1 & flag.bits) > 0,
+        1 => (u2 & flag.bits) > 0,
+        2 => (u3 & flag.bits) > 0,
+        3 => (u4 & flag.bits) > 0,
+        _ => throw new Exception("Limited to 128 components")
+      };
       set {
-        if (bitarray == null) {
-          bitarray = new uint[flag.index + 1];
-        } else if (bitarray.Length < flag.index + 1) {
-          Array.Resize(ref bitarray, flag.index + 1);
+        switch (flag.index) {
+          case 0:
+            u1 = value ? u1 |= flag.bits : u1 &= ~flag.bits;
+            break;
+          case 1:
+            u2 = value ? u2 |= flag.bits : u2 &= ~flag.bits;
+            break;
+          case 2:
+            u3 = value ? u3 |= flag.bits : u3 &= ~flag.bits;
+            break;
+          case 3:
+            u4 = value ? u4 |= flag.bits : u4 &= ~flag.bits;
+            break;
         }
-        bitarray[flag.index] = value ? bitarray[flag.index] |= flag.bits : bitarray[flag.index] &= ~flag.bits;
       }
     }
 
     public bool Contains(FlagEnum filter) {
-      if (bitarray == null || filter.bitarray == null) return false;
+      if (filter.u1 != 0 && (u1 & filter.u1) != filter.u1) return false;
+      if (filter.u2 != 0 && (u2 & filter.u2) != filter.u2) return false;
+      if (filter.u3 != 0 && (u3 & filter.u3) != filter.u3) return false;
+      if (filter.u4 != 0 && (u4 & filter.u4) != filter.u4) return false;
+      return true;
+    }
 
-      for (int i = 0; i < filter.bitarray.Length; i++) {
-        uint b = filter.bitarray[i];
-        // if checked bit is SOMETHING, but array is out of bounds or checked bitarray doesn't match
-        if (b != 0u && (i >= bitarray.Length || (bitarray[i] & b) != b)) return false;
-      }
+    public bool IsSubsetOf(FlagEnum filter) {
+      if (filter.u1 != 0 && (u1 & filter.u1) != filter.u1) return false;
+      if (filter.u2 != 0 && (u2 & filter.u2) != filter.u2) return false;
+      if (filter.u3 != 0 && (u3 & filter.u3) != filter.u3) return false;
+      if (filter.u4 != 0 && (u4 & filter.u4) != filter.u4) return false;
       return true;
     }
 
     public struct FlagEnumerator {
-      private readonly uint[] bitarray;
+      private readonly FlagEnum flags;
       private int i, j;
 
-      internal FlagEnumerator(uint[] bitarray) =>
-          (this.bitarray, i, j) = (bitarray, 0, -1);
+      internal FlagEnumerator(FlagEnum flags) =>
+        (this.flags, i, j) = (flags, 0, -1);
 
       public int Current => i * 32 + j;
 
       public bool MoveNext() {
-        if (bitarray == null) return false;
-
-        while (i < bitarray.Length) {
+        while (i < 4) {
           if (++j < 32) {
-            if ((bitarray[i] & (uint)1 << j) != 0) {
+            if (i == 0 && (flags.u1 & (uint)1 << j) != 0) {
+              return true;
+            } else if (i == 1 && (flags.u2 & (uint)1 << j) != 0) {
+              return true;
+            } else if (i == 2 && (flags.u3 & (uint)1 << j) != 0) {
+              return true;
+            } else if (i == 3 && (flags.u4 & (uint)1 << j) != 0) {
               return true;
             }
           } else {
@@ -82,44 +86,15 @@ namespace ManulECS {
       public void Reset() => (i, j) = (0, -1);
     }
 
-    public FlagEnumerator GetEnumerator() => new(bitarray);
+    public FlagEnumerator GetEnumerator() => new(this);
 
-    public bool IsSubsetOf(FlagEnum filter) {
-      if (bitarray == null || filter.bitarray == null) return false;
+    public static bool operator ==(FlagEnum left, FlagEnum right) => left.Equals(right);
+    public static bool operator !=(FlagEnum left, FlagEnum right) => !(left == right);
 
-      for (int i = 0; i < filter.bitarray.Length; i++) {
-        uint b = filter.bitarray[i];
-        // if checked bit is SOMETHING, but array is out of bounds or checked bitarray doesn't match
-        if (b != 0u && (i >= bitarray.Length || (bitarray[i] & b) != b)) return false;
-      }
-      return true;
-    }
+    public bool Equals(FlagEnum other) => u1 == other.u1 && u2 == other.u2 && u3 == other.u3 && u4 == other.u4;
 
-    public static bool operator ==(FlagEnum f1, FlagEnum f2) => f1.Equals(f2);
-    public static bool operator !=(FlagEnum f1, FlagEnum f2) => !f1.Equals(f2);
-
-    public bool Equals(FlagEnum other) {
-      if (bitarray.Length != other.bitarray.Length) {
-        return false;
-      }
-
-      for (int i = 0; i < bitarray.Length; i++) {
-        if (bitarray[i] != other.bitarray[i]) {
-          return false;
-        }
-      }
-      return true;
-    }
-
-    public override int GetHashCode() {
-      unchecked {
-        int hashCode = 17;
-        for (int i = 0; i < bitarray.Length; i++) {
-          hashCode = (hashCode * 23) + bitarray[i].GetHashCode();
-        }
-        return hashCode;
-      }
-    }
+    public override int GetHashCode() => HashCode.Combine(u1, u2, u3, u4);
+    public override bool Equals(object obj) => obj is FlagEnum flags && Equals(flags);
   }
 
   public readonly struct Flag : IEquatable<Flag> {
@@ -141,6 +116,10 @@ namespace ManulECS {
 
     public bool Equals(Flag other) => index == other.index && bits == other.bits;
 
+    public static bool operator ==(Flag left, Flag right) => left.Equals(right);
+    public static bool operator !=(Flag left, Flag right) => !(left == right);
+
     public override int GetHashCode() => HashCode.Combine(index, bits);
+    public override bool Equals(object obj) => obj is Flag flag && Equals(flag);
   }
 }

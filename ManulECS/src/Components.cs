@@ -11,6 +11,9 @@ namespace ManulECS {
       var flag = GetNextFlag();
       var index = (uint)flag.BitPosition;
       if (index >= indexedPools.Length) {
+        if (index == 128) {
+          throw new Exception("128 component maximum exceeded!");
+        }
         Util.ResizeArray(index, ref indexedPools, null);
       }
 

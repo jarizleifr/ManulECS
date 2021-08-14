@@ -232,5 +232,13 @@ namespace ManulECS {
         where T3 : struct, IBaseComponent
         where T4 : struct, IBaseComponent =>
             viewCache.GetView(this, new FlagEnum(GetFlag<T1>(), GetFlag<T2>(), GetFlag<T3>(), GetFlag<T4>()));
+
+    public View View<T1, T2, T3, T4, T5>()
+        where T1 : struct, IBaseComponent
+        where T2 : struct, IBaseComponent
+        where T3 : struct, IBaseComponent
+        where T4 : struct, IBaseComponent
+        where T5 : struct, IBaseComponent =>
+          viewCache.GetView(this, new FlagEnum(GetFlag<T1>(), GetFlag<T2>(), GetFlag<T3>(), GetFlag<T4>(), GetFlag<T5>()));
   }
 }
