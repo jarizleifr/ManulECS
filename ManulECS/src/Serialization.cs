@@ -20,18 +20,19 @@ namespace ManulECS {
     }
 
     public static string Create(World world, string profile) {
+      var serializer = new JsonSerializer { TypeNameHandling = TypeNameHandling.Objects };
       var container = new JObject(
           new JProperty("resources",
             new JArray(
               from r in world.resources
               where ResourceProfileMatches(profile, r.Value)
-              select JObject.FromObject(r.Value, new JsonSerializer { TypeNameHandling = TypeNameHandling.Objects })
+              select JObject.FromObject(r.Value, serializer)
             )
           ),
           new JProperty("entities",
             new JArray(
               from obj in
-                from e in world.Each()
+                from e in world.Entities
                 select EntityConverter.SerializeEntity(world, profile, e)
               where obj != null
               select obj
@@ -43,8 +44,10 @@ namespace ManulECS {
 
     public static void Apply(World world, string json) {
       var obj = JObject.Parse(json);
+      var serializer = new JsonSerializer { TypeNameHandling = TypeNameHandling.Objects };
+
       foreach (JObject jsonRes in obj["resources"]) {
-        var resource = jsonRes.ToObject<object>(new JsonSerializer { TypeNameHandling = TypeNameHandling.Objects });
+        var resource = jsonRes.ToObject<object>(serializer);
         world.SetResource(resource.GetType(), resource);
       }
 
@@ -53,7 +56,7 @@ namespace ManulECS {
           .ToArray();
 
       // Use custom Entity field converter to make sure entity references stay valid.
-      var serializer = JsonSerializer.Create(new JsonSerializerSettings() {
+      var entitySerializer = JsonSerializer.Create(new JsonSerializerSettings() {
         TypeNameHandling = TypeNameHandling.Objects,
         Converters = { new EntityFieldConverter(entityRemap) }
       });
@@ -61,7 +64,7 @@ namespace ManulECS {
       int index = 0;
       foreach (JObject loadedEntity in obj["entities"]) {
         var newEntity = entityRemap[index].created;
-        EntityConverter.DeserializeEntity(world, newEntity, loadedEntity["components"], serializer);
+        EntityConverter.DeserializeEntity(world, newEntity, loadedEntity["components"], entitySerializer);
         index++;
       }
     }
@@ -73,15 +76,10 @@ namespace ManulECS {
 
     public override bool CanWrite => false;
     public override void WriteJson(JsonWriter writer, Entity value, JsonSerializer serializer) { }
-    public override Entity ReadJson(JsonReader reader, Type objectType, Entity existingValue, bool hasExistingValue, JsonSerializer serializer) {
-      var jobj = (JObject)JToken.Load(reader);
-      var referenced = jobj.ToObject<Entity>();
-
-      return entityRemap
-        .Where(e => e.old == referenced)
+    public override Entity ReadJson(JsonReader reader, Type _t, Entity _e, bool _b, JsonSerializer _s) =>
+      entityRemap.Where(e => e.old == JToken.Load(reader).ToObject<Entity>())
         .Select(e => e.created)
         .Single();
-    }
   }
 
   internal static class EntityConverter {
@@ -102,6 +100,7 @@ namespace ManulECS {
     public static JObject SerializeEntity(World world, string profile, Entity entity) {
       bool componentProfilePresent = false;
       var componentArray = new JArray();
+      var serializer = new JsonSerializer { TypeNameHandling = TypeNameHandling.Objects };
       foreach (var idx in world.GetEntityDataByIndex(entity.Id)) {
         var component = world.components.GetIndexedPool(idx).Get(entity.Id);
         var type = component.GetType();
@@ -115,7 +114,7 @@ namespace ManulECS {
 
           componentProfilePresent = true;
         }
-        componentArray.Add(JObject.FromObject(component, new JsonSerializer { TypeNameHandling = TypeNameHandling.Objects }));
+        componentArray.Add(JObject.FromObject(component, serializer));
       }
       if (!componentProfilePresent && profile != null) return null;
       if (componentArray.Count == 0) return null;
@@ -124,6 +123,15 @@ namespace ManulECS {
       serialized.Add("components", componentArray);
 
       return serialized;
+
+      bool DiscardComponent(Type type) =>
+        GetAttribute<NeverSerializeComponentAttribute>(type) != null;
+
+      bool DiscardEntity(Type type) =>
+        GetAttribute<NeverSerializeEntityAttribute>(type) != null;
+
+      T GetAttribute<T>(Type type) where T : Attribute =>
+        (T)Attribute.GetCustomAttribute(type, typeof(T));
     }
 
     public static void DeserializeEntity(World world, Entity newEntity, JToken serializedComponents, JsonSerializer serializer) {
@@ -147,14 +155,5 @@ namespace ManulECS {
         componentReader.Set(world, newEntity, component);
       }
     }
-
-    private static bool DiscardComponent(Type type) =>
-      GetAttribute<NeverSerializeComponentAttribute>(type) != null;
-
-    private static bool DiscardEntity(Type type) =>
-      GetAttribute<NeverSerializeEntityAttribute>(type) != null;
-
-    private static T GetAttribute<T>(Type type) where T : Attribute =>
-      (T)Attribute.GetCustomAttribute(type, typeof(T));
   }
 }

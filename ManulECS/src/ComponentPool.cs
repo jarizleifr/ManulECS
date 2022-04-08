@@ -34,27 +34,28 @@ namespace ManulECS {
   public abstract class PairList<T1, T2>
   where T1 : struct
   where T2 : struct {
-    protected int count;
     protected T1[] items;
     protected T2[] items2;
+
+    public int Count { get; protected set; }
 
     public PairList() => Initialize();
 
     protected void Initialize() {
-      count = 0;
+      Count = 0;
       items = new T1[4];
       items2 = new T2[4];
     }
 
     protected void AddEntry(in T1 item, in T2 item2) {
-      if (count == items.Length) {
+      if (Count == items.Length) {
         Array.Resize(ref items, items.Length * 2);
         Array.Resize(ref items2, items2.Length * 2);
       }
 
-      items[count] = item;
-      items2[count] = item2;
-      count++;
+      items[Count] = item;
+      items2[Count] = item2;
+      Count++;
     }
 
     protected void UpdateEntry(uint index, in T1 item, in T2 item2) {
@@ -63,9 +64,9 @@ namespace ManulECS {
     }
 
     protected void ReplaceEntryWithLast(uint index) {
-      items[index] = items[count - 1];
-      items2[index] = items2[count - 1];
-      count--;
+      Count--;
+      items[index] = items[Count];
+      items2[index] = items2[Count];
     }
 
     protected void Swap(uint index, uint index2) {
@@ -82,23 +83,18 @@ namespace ManulECS {
   /// Sparse set backed with an array. Use for common components. Uses more memory, but is faster.
   /// </summary>
   public class SparseComponentPool<T> : PairList<uint, T>, IComponentPool<T> where T : struct {
-    private int version = 0;
-    private readonly Flag flag;
-    private uint[] mapping;
+    private uint[] mapping = new uint[4];
+
+    public Flag Flag { get; init; }
+    public int Version { get; private set; } = 0;
 
     public SparseComponentPool(Flag flag) {
-      this.flag = flag;
-      mapping = new uint[4];
-      for (int i = 0; i < mapping.Length; i++) {
-        mapping[i] = Entity.NULL_ID;
-      }
+      Flag = flag;
+      Array.Fill(mapping, Entity.NULL_ID);
     }
 
-    public int Version => version;
-    public int Count => count;
-    public Flag Flag => flag;
-    public Span<uint> GetIndices() => new(items, 0, count);
-    public Span<T> GetComponents() => new(items2, 0, count);
+    public Span<uint> GetIndices() => new(items, 0, Count);
+    public Span<T> GetComponents() => new(items2, 0, Count);
 
     /// <summary>
     /// Get reference of value. This WILL throw exception if not found.
@@ -112,7 +108,7 @@ namespace ManulECS {
     public bool Has(uint index) => index < mapping.Length && mapping[index] != Entity.NULL_ID;
 
     public void Set(uint index, in T item) {
-      version++;
+      Version++;
 
       if (index >= mapping.Length) {
         Util.ResizeArray(index, ref mapping, Entity.NULL_ID);
@@ -124,38 +120,35 @@ namespace ManulECS {
         return;
       }
 
-      mapping[index] = (uint)count;
+      mapping[index] = (uint)Count;
       AddEntry(index, item);
     }
 
     public void Remove(uint index) {
-      version++;
-      if (index >= mapping.Length) return;
-
-      var key = mapping[index];
-      if (key == Entity.NULL_ID) return;
-
-      if (key == count - 1) {
-        mapping[index] = Entity.NULL_ID;
-        count--;
-      } else {
-        var i = items[count - 1];
-        ReplaceEntryWithLast(key);
-        mapping[i] = key;
-        mapping[index] = Entity.NULL_ID;
+      Version++;
+      if (index < mapping.Length) {
+        ref var key = ref mapping[index];
+        if (key != Entity.NULL_ID) {
+          if (key == Count - 1) {
+            key = Entity.NULL_ID;
+            Count--;
+          } else {
+            ReplaceEntryWithLast(key);
+            mapping[items[Count]] = key;
+            key = Entity.NULL_ID;
+          }
+        }
       }
     }
 
     public void Clone(uint origin, uint target) => Set(target, GetRef(origin));
 
-    public object Get(uint index) => Has(index) ? (object)items2[mapping[index]] : null;
+    public object Get(uint index) => Has(index) ? items2[mapping[index]] : null;
 
     public void Clear() {
-      version++;
+      Version++;
       Initialize();
-      for (int i = 0; i < mapping.Length; i++) {
-        mapping[i] = Entity.NULL_ID;
-      }
+      Array.Fill(mapping, Entity.NULL_ID);
     }
   }
 
@@ -163,20 +156,15 @@ namespace ManulECS {
   /// Sparse set backed with a dictionary mapping. Use for rare components. Slower, but more memory efficient.
   /// </summary>
   public class DenseComponentPool<T> : PairList<uint, T>, IComponentPool<T> where T : struct {
-    private int version = 0;
-    private readonly Flag flag;
-    private readonly Dictionary<uint, uint> mapping;
+    private readonly Dictionary<uint, uint> mapping = new();
 
-    public DenseComponentPool(Flag flag) {
-      mapping = new Dictionary<uint, uint>();
-      this.flag = flag;
-    }
+    public int Version { get; private set; } = 0;
+    public Flag Flag { get; init; }
 
-    public int Version => version;
-    public int Count => count;
-    public Flag Flag => flag;
-    public Span<uint> GetIndices() => items.AsSpan(0, count);
-    public Span<T> GetComponents() => items2.AsSpan(0, count);
+    public DenseComponentPool(Flag flag) => Flag = flag;
+
+    public Span<uint> GetIndices() => items.AsSpan(0, Count);
+    public Span<T> GetComponents() => items2.AsSpan(0, Count);
 
     /// <summary>
     /// Get reference of value. This WILL throw exception if not found.
@@ -189,25 +177,24 @@ namespace ManulECS {
     public bool Has(uint index) => mapping.ContainsKey(index);
 
     public void Set(uint index, in T item) {
-      version++;
+      Version++;
       if (mapping.TryGetValue(index, out var key)) {
         UpdateEntry(key, index, item);
-        return;
+      } else {
+        mapping.Add(index, (uint)Count);
+        AddEntry(index, item);
       }
-      mapping.Add(index, (uint)count);
-      AddEntry(index, item);
     }
 
     public void Remove(uint index) {
-      version++;
+      Version++;
       if (mapping.TryGetValue(index, out var key)) {
-        if (key == count - 1) {
+        if (key == Count - 1) {
           mapping.Remove(index);
-          count--;
+          Count--;
         } else {
-          var i = items[count - 1];
           ReplaceEntryWithLast(key);
-          mapping[i] = key;
+          mapping[items[Count]] = key;
           mapping.Remove(index);
         }
       }
@@ -215,10 +202,10 @@ namespace ManulECS {
 
     public void Clone(uint origin, uint target) => Set(target, GetRef(origin));
 
-    public object Get(uint index) => Has(index) ? (object)items2[mapping[index]] : null;
+    public object Get(uint index) => Has(index) ? items2[mapping[index]] : null;
 
     public void Clear() {
-      version++;
+      Version++;
       Initialize();
       mapping.Clear();
     }
@@ -227,64 +214,49 @@ namespace ManulECS {
   public class TagPool<T> : IComponentPool where T : struct {
     // Use a dummy component for serialization
     private readonly T dummy = default;
-    private int version = 0;
-    private readonly Flag flag;
+    private uint[] ids = new uint[4];
 
-    private uint[] ids;
-    private int count;
+    public Flag Flag { get; init; }
+    public int Version { get; private set; } = 0;
+    public int Count { get; private set; } = 0;
 
     public TagPool(Flag flag) {
-      this.flag = flag;
-      ids = new uint[4];
-      count = 0;
+      Flag = flag;
+      Array.Fill(ids, Entity.NULL_ID);
     }
-
-    public int Version => version;
-    public int Count => count;
-    public Flag Flag => flag;
 
     public bool Has(uint id) => FindIndex(id) != -1;
 
     public object Get(uint id) => dummy;
 
     public void Set(uint id) {
-      version++;
-      if (count == ids.Length) {
+      Version++;
+      if (Count == ids.Length) {
         Array.Resize(ref ids, ids.Length * 2);
       }
-      ids[count++] = id;
+      ids[Count++] = id;
     }
 
     public void Remove(uint id) {
-      version++;
+      Version++;
       var index = FindIndex(id);
       if (index != -1) {
-        ids[index] = ids[--count];
+        ids[index] = ids[--Count];
       }
     }
 
     public void Clone(uint origin, uint target) {
-      if (FindIndex(origin) != -1) {
+      if (Has(origin)) {
         Set(target);
       } else {
         Remove(target);
       }
     }
 
-    public Span<uint> GetIndices() => ids.AsSpan(0, count);
+    public Span<uint> GetIndices() => ids.AsSpan(0, Count);
 
-    public void Clear() {
-      version++;
-      count = 0;
-    }
+    public void Clear() => (Version, Count) = (Version + 1, 0);
 
-    private int FindIndex(uint id) {
-      for (int i = 0; i < count; i++) {
-        if (ids[i] == id) {
-          return i;
-        }
-      }
-      return -1;
-    }
+    private int FindIndex(uint id) => Array.FindIndex(ids, (i) => i == id);
   }
 }

@@ -19,7 +19,7 @@ namespace ManulECS.Tests {
       world.Create();
       world.Create();
 
-      Assert.Equal(3, world.EntityCount);
+      Assert.Equal(3, world.Count);
     }
 
     [Fact]
@@ -39,18 +39,18 @@ namespace ManulECS.Tests {
         world.Create();
       }
 
-      Assert.Equal(256, world.EntityCount);
+      Assert.Equal(256, world.Count);
     }
 
     [Fact]
-    public void Each_OmitsRemovedEntity() {
+    public void EntitiesProperty_OmitsRemovedEntity() {
       world.Create();
       var entity = world.Create();
       world.Create();
 
       world.Remove(entity);
 
-      Assert.DoesNotContain(world.Each(), e => e.Id == 1);
+      Assert.DoesNotContain(world.Entities, e => e.Id == 1);
     }
 
     [Fact]

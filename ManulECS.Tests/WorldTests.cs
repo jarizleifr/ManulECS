@@ -61,7 +61,7 @@ namespace ManulECS.Tests {
     public void ClearingWorld_RemovesEntities() {
       world.Create();
       world.Clear();
-      Assert.Equal(0, world.EntityCount);
+      Assert.Equal(0, world.Count);
     }
 
     [Fact]
@@ -82,11 +82,11 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void EntityCountReturnsZero_AfterRemovingAllEntities() {
-      foreach (var e in world.Each()) {
+    public void CountReturnsZero_AfterRemovingAllEntities() {
+      foreach (var e in world.Entities) {
         world.Remove(e);
       }
-      Assert.Equal(0, world.EntityCount);
+      Assert.Equal(0, world.Count);
     }
 
     [Fact]

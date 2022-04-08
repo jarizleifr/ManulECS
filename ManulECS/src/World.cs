@@ -11,11 +11,11 @@ namespace ManulECS {
     private uint destroyed = Entity.NULL_ID;
     private uint nextEntityId = 0;
 
-    public IEnumerable<Entity> Each() => nextEntityId != 0
-        ? items.Where((item, index) => item.Id == index)
-        : Enumerable.Empty<Entity>();
+    internal IEnumerable<Entity> Entities => nextEntityId != 0
+      ? items.Where((entity, index) => entity.Id == index)
+      : Enumerable.Empty<Entity>();
 
-    public int EntityCount => Each().Count();
+    public int EntityCount => Entities.Count();
 
     public bool IsAlive(Entity entity) {
       var entityInSlot = items[entity.Id];
@@ -23,7 +23,6 @@ namespace ManulECS {
     }
 
     internal Entity GetEntityByIndex(uint index) => items[index];
-
     internal ref FlagEnum GetEntityDataByIndex(uint index) => ref items2[index];
 
     internal Flag GetFlag<T>() where T : struct =>
@@ -74,7 +73,7 @@ namespace ManulECS {
     /// <summary>Declare a component/tag of type T for use.</summary>
     public void Declare<T>() where T : struct, IBaseComponent => components.Register<T>();
 
-    public int Count<T>() where T : struct, IBaseComponent => components.GetUntypedPool<T>().Count;
+    public new int Count<T>() where T : struct, IBaseComponent => components.GetUntypedPool<T>().Count;
 
     /// <summary>Check if entity has a component or tag of type T.</summary>
     public bool Has<T>(Entity entity) where T : struct, IBaseComponent =>
@@ -170,9 +169,8 @@ namespace ManulECS {
       var pool = components.GetUntypedPool<T>();
       var flag = pool.Flag;
       if (pool.Count > 0) {
-        foreach (var entity in Each()) {
-          ref var entityData = ref GetEntityDataByIndex(entity.Id);
-          entityData[flag] = false;
+        for (int i = 0; i < items2.Length; i++) {
+          items2[i][flag] = false;
         }
         pool.Clear();
       }
