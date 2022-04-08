@@ -11,32 +11,25 @@ namespace ManulECS {
       var flag = GetNextFlag();
       var index = (uint)flag.BitPosition;
       if (index >= indexedPools.Length) {
-        if (index == 128) {
-          throw new Exception("128 component maximum exceeded!");
+        if (index == FlagEnum.MAX_SIZE * 32) {
+          throw new Exception($"{FlagEnum.MAX_SIZE * 32} component maximum exceeded!");
         }
         Util.ResizeArray(index, ref indexedPools, null);
       }
 
-      IComponentPool pool;
-      if (typeof(ITag).IsAssignableFrom(typeof(T))) {
-        pool = new TagPool<T>(flag);
-      } else {
-        pool = CreatePool<T>(flag);
-      }
+      IComponentPool pool = typeof(T) switch {
+        var type when typeof(ITag).IsAssignableFrom(type) => new TagPool<T>(flag),
+        var type when type.IsDefined(typeof(DenseAttribute), false) => new DenseComponentPool<T>(flag),
+        _ => new SparseComponentPool<T>(flag),
+      };
 
       if (!pools.TryAdd(typeof(T), pool)) {
         throw new Exception($"Component/Tag {typeof(T)} already registered!");
       }
-      indexedPools[flag.BitPosition] = pool;
+      indexedPools[index] = pool;
     }
 
-    internal void Clear() {
-      foreach (var pool in indexedPools) {
-        if (pool != null) {
-          pool.Clear();
-        }
-      }
-    }
+    internal void Clear() => Array.ForEach(indexedPools, pool => pool?.Clear());
 
     internal void RemoveComponents(Entity entity, in FlagEnum flags) {
       foreach (var index in flags) {
@@ -63,14 +56,6 @@ namespace ManulECS {
         ? new Flag(nextFlag.index, nextFlag.bits << 1)
         : new Flag(nextFlag.index + 1, 1u);
       return flag;
-    }
-
-    private static IComponentPool CreatePool<T>(Flag flag) where T : struct {
-      if (typeof(T).IsDefined(typeof(DenseAttribute), false)) {
-        return new DenseComponentPool<T>(flag);
-      } else {
-        return new SparseComponentPool<T>(flag);
-      }
     }
   }
 }

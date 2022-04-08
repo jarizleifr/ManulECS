@@ -72,5 +72,16 @@ namespace ManulECS.Tests {
       Assert.Contains(64, enums);
       Assert.Contains(126, enums);
     }
+
+    [Fact]
+    public void Flag_Returns_CorrectBitPosition() {
+      var f1 = new Flag(0, 1);
+      var f2 = new Flag(1, 2);
+      var f3 = new Flag(1, 32);
+
+      Assert.Equal(0, f1.BitPosition);
+      Assert.Equal(33, f2.BitPosition);
+      Assert.Equal(37, f3.BitPosition);
+    }
   }
 }

@@ -3,7 +3,8 @@ using System.Diagnostics;
 
 namespace ManulECS {
   public unsafe struct FlagEnum : IEquatable<FlagEnum> {
-    private fixed uint u[4];
+    public const int MAX_SIZE = 4;
+    private fixed uint u[MAX_SIZE];
 
     public FlagEnum(params Flag[] flags) {
       foreach (var flag in flags) {
@@ -20,7 +21,7 @@ namespace ManulECS {
     }
 
     public bool IsSubsetOf(FlagEnum filter) {
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < MAX_SIZE; i++) {
         var (a, b) = (u[i], filter.u[i]);
         if (b != 0 && (a & b) != b) return false;
       }
@@ -37,7 +38,7 @@ namespace ManulECS {
       public int Current => i * 32 + j;
 
       public bool MoveNext() {
-        while (i < 4) {
+        while (i < MAX_SIZE) {
           if (++j < 32) {
             if ((flags.u[i] & 1u << j) != 0) {
               return true;
@@ -60,7 +61,7 @@ namespace ManulECS {
     public static bool operator !=(FlagEnum left, FlagEnum right) => !(left == right);
 
     public bool Equals(FlagEnum other) {
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < MAX_SIZE; i++) {
         if (u[i] != other.u[i]) return false;
       }
       return true;
@@ -69,7 +70,7 @@ namespace ManulECS {
     public override int GetHashCode() {
       unchecked {
         int hash = 17;
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < MAX_SIZE; i++) {
           hash = hash * 31 + u[i].GetHashCode();
         }
         return hash;
@@ -84,8 +85,8 @@ namespace ManulECS {
     public readonly uint bits;
 
     public Flag(int index, uint bits) {
-      Debug.Assert(bits != 0u);
-      Debug.Assert(index < 4);
+      Debug.Assert(bits != 0u, "Bits cannot be zero!");
+      Debug.Assert(index < FlagEnum.MAX_SIZE, "Index cannot be larger than MAX_SIZE constant!");
       this.index = index;
       this.bits = bits;
     }
