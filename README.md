@@ -153,3 +153,23 @@ File.WriteAllText("save.json", json);
 var json = world.Serialize("global");   // Serialize only resources and entities set to "global" profile
 File.WriteAllText("global.json", json);
 ```
+
+### Code generation
+
+I've included a Roslyn generator, which can auto-generate an extension method to declare all structs that have the `IComponent` or `ITag` marker interface. It's a bit of a brute force solution, but it makes things a bit more maintainable.
+
+Add the ManulECS.Generators project in your own .csproj file as an analyzer:
+
+```
+<ProjectReference Include="..\ManulECS\ManulECS.Generators\ManulECS.Generators.csproj">
+  <OutputItemType>Analyzer</OutputItemType>
+  <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+</ProjectReference>
+```
+
+Build your project and you should be good to go!
+
+```
+var world = new World();
+world.DeclareAll();
+```
