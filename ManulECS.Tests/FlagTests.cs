@@ -16,12 +16,6 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void FlagEnum_ThrowsException_WhenFlagIsOverLimit() {
-      var enum1 = new FlagEnum();
-      Assert.Throws<Exception>(() => enum1[new Flag(4, 128)]);
-    }
-
-    [Fact]
     public void FlagEnum_ReturnsFalse_WhenBitNotSet() {
       var enum1 = new FlagEnum(new Flag(0, 1), new Flag(0, 4));
       Assert.False(enum1[new Flag(0, 2)]);
@@ -56,8 +50,8 @@ namespace ManulECS.Tests {
       var enum1 = new FlagEnum(flag1, flag2, flag3);
       var enum2 = new FlagEnum(flag1, flag3);
 
-      Assert.True(enum1.Contains(enum2));
-      Assert.False(enum2.Contains(enum1));
+      Assert.True(enum1.IsSubsetOf(enum2));
+      Assert.False(enum2.IsSubsetOf(enum1));
     }
 
     [Fact]

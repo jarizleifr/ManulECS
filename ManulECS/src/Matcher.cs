@@ -1,55 +1,29 @@
 using System;
+using System.Diagnostics;
 
 namespace ManulECS {
-  public struct FlagEnum : IEquatable<FlagEnum> {
-    private uint u1, u2, u3, u4;
+  public unsafe struct FlagEnum : IEquatable<FlagEnum> {
+    private fixed uint u[4];
 
     public FlagEnum(params Flag[] flags) {
-      (u1, u2, u3, u4) = (0, 0, 0, 0);
       foreach (var flag in flags) {
         this[flag] = true;
       }
     }
 
     public bool this[Flag flag] {
-      get => flag.index switch {
-        0 => (u1 & flag.bits) > 0,
-        1 => (u2 & flag.bits) > 0,
-        2 => (u3 & flag.bits) > 0,
-        3 => (u4 & flag.bits) > 0,
-        _ => throw new Exception("Limited to 128 components")
-      };
+      get => (u[flag.index] & flag.bits) > 0;
       set {
-        switch (flag.index) {
-          case 0:
-            u1 = value ? u1 |= flag.bits : u1 &= ~flag.bits;
-            break;
-          case 1:
-            u2 = value ? u2 |= flag.bits : u2 &= ~flag.bits;
-            break;
-          case 2:
-            u3 = value ? u3 |= flag.bits : u3 &= ~flag.bits;
-            break;
-          case 3:
-            u4 = value ? u4 |= flag.bits : u4 &= ~flag.bits;
-            break;
-        }
+        var val = u[flag.index];
+        u[flag.index] = value ? val |= flag.bits : val &= ~flag.bits;
       }
     }
 
-    public bool Contains(FlagEnum filter) {
-      if (filter.u1 != 0 && (u1 & filter.u1) != filter.u1) return false;
-      if (filter.u2 != 0 && (u2 & filter.u2) != filter.u2) return false;
-      if (filter.u3 != 0 && (u3 & filter.u3) != filter.u3) return false;
-      if (filter.u4 != 0 && (u4 & filter.u4) != filter.u4) return false;
-      return true;
-    }
-
     public bool IsSubsetOf(FlagEnum filter) {
-      if (filter.u1 != 0 && (u1 & filter.u1) != filter.u1) return false;
-      if (filter.u2 != 0 && (u2 & filter.u2) != filter.u2) return false;
-      if (filter.u3 != 0 && (u3 & filter.u3) != filter.u3) return false;
-      if (filter.u4 != 0 && (u4 & filter.u4) != filter.u4) return false;
+      for (int i = 0; i < 4; i++) {
+        var (a, b) = (u[i], filter.u[i]);
+        if (b != 0 && (a & b) != b) return false;
+      }
       return true;
     }
 
@@ -65,13 +39,7 @@ namespace ManulECS {
       public bool MoveNext() {
         while (i < 4) {
           if (++j < 32) {
-            if (i == 0 && (flags.u1 & (uint)1 << j) != 0) {
-              return true;
-            } else if (i == 1 && (flags.u2 & (uint)1 << j) != 0) {
-              return true;
-            } else if (i == 2 && (flags.u3 & (uint)1 << j) != 0) {
-              return true;
-            } else if (i == 3 && (flags.u4 & (uint)1 << j) != 0) {
+            if ((flags.u[i] & 1u << j) != 0) {
               return true;
             }
           } else {
@@ -91,9 +59,23 @@ namespace ManulECS {
     public static bool operator ==(FlagEnum left, FlagEnum right) => left.Equals(right);
     public static bool operator !=(FlagEnum left, FlagEnum right) => !(left == right);
 
-    public bool Equals(FlagEnum other) => u1 == other.u1 && u2 == other.u2 && u3 == other.u3 && u4 == other.u4;
+    public bool Equals(FlagEnum other) {
+      for (int i = 0; i < 4; i++) {
+        if (u[i] != other.u[i]) return false;
+      }
+      return true;
+    }
 
-    public override int GetHashCode() => HashCode.Combine(u1, u2, u3, u4);
+    public override int GetHashCode() {
+      unchecked {
+        int hash = 17;
+        for (int i = 0; i < 4; i++) {
+          hash = hash * 31 + u[i].GetHashCode();
+        }
+        return hash;
+      }
+    }
+
     public override bool Equals(object obj) => obj is FlagEnum flags && Equals(flags);
   }
 
@@ -102,7 +84,8 @@ namespace ManulECS {
     public readonly uint bits;
 
     public Flag(int index, uint bits) {
-      if (bits == 0u) throw new Exception("Bits cannot be 0");
+      Debug.Assert(bits != 0u);
+      Debug.Assert(index < 4);
       this.index = index;
       this.bits = bits;
     }

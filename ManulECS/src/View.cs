@@ -37,7 +37,7 @@ namespace ManulECS {
       entities.Clear();
       foreach (var id in smallestSet) {
         var entityData = world.GetEntityDataByIndex(id);
-        if (entityData.Contains(matcher)) {
+        if (entityData.IsSubsetOf(matcher)) {
           var entity = world.GetEntityByIndex(id);
           entities.Add(entity);
         }
