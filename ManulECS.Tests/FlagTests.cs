@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Net.NetworkInformation;
+using System.Reflection;
 using Xunit;
 
 namespace ManulECS.Tests {
@@ -9,7 +12,13 @@ namespace ManulECS.Tests {
 
       Assert.False(enum1[new Flag(0, 1)]);
       Assert.False(enum1[new Flag(2, 32)]);
-      Assert.False(enum1[new Flag(4, 128)]);
+      Assert.False(enum1[new Flag(3, 64)]);
+    }
+
+    [Fact]
+    public void FlagEnum_ThrowsException_WhenFlagIsOverLimit() {
+      var enum1 = new FlagEnum();
+      Assert.Throws<Exception>(() => enum1[new Flag(4, 128)]);
     }
 
     [Fact]
@@ -55,8 +64,8 @@ namespace ManulECS.Tests {
     public void FlagEnumEnumeratesCorrectly() {
       var f1 = new Flag(0, 1);
       var f2 = new Flag(1, 1);
-      var f3 = new Flag(4, 1);
-      var f4 = new Flag(4, 128);
+      var f3 = new Flag(2, 1);
+      var f4 = new Flag(3, 1 << 30);
 
       var flagEnum = new FlagEnum(f1, f2, f3, f4);
       var enums = new List<int>();
@@ -66,8 +75,8 @@ namespace ManulECS.Tests {
 
       Assert.Contains(0, enums);
       Assert.Contains(32, enums);
-      Assert.Contains(128, enums);
-      Assert.Contains(135, enums);
+      Assert.Contains(64, enums);
+      Assert.Contains(126, enums);
     }
   }
 }
