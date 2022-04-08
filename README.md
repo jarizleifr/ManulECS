@@ -7,7 +7,7 @@ I created ManulEC in 2019 for my roguelike game to provide simple runtime compos
 ## Features
 
 - Focus on simplicity
-- Data-driven, cache-coherent ECS, achieved with sparse sets and structs
+- Data-driven, cache-coherent ECS, achieved with sparse sets of structs
 - Support for tag components without data
 - Support for non-entity resources
 - Declarative, control internals by providing attributes to components/resources
@@ -81,11 +81,17 @@ world.Clear<Tag>();                 // Clear all tags of type
 
 ### Resource
 
-Resources are classes that exist outside the sphere of entities. You could argue that a Level object isn't a good fit for an entity, so you could store the it in resources instead!
+Resources are classes that exist outside the sphere of entities. Resources are serialized just like entities, making them a good choice for complex data that needs to be persisted in a save game.
+
+Examples of objects that make good candiates for resources could be the current level in a game, or a clock, that controls whether it's day or night in the game.
 
 ```
+var level = CreateLevel();
 world.SetResource(level);
-var level = world.FetchResource<Level>();
+```
+
+```
+var level = world.GetResource<Level>();
 ```
 
 ### Systems
@@ -95,7 +101,7 @@ ManulECS provides a View of Entities that you can iterate through with a foreach
 You can use Pools<T...> method to improve performance by providing reusable component pool to read from.
 
 ```
-public static MoveSystem(World world)
+public static void MoveSystem(World world)
 {
     var (positions, velocities) = world.Pools<Position, Velocity>();
     foreach (var e in world.View<Position, Velocity>())
