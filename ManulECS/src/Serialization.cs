@@ -76,10 +76,13 @@ namespace ManulECS {
 
     public override bool CanWrite => false;
     public override void WriteJson(JsonWriter writer, Entity value, JsonSerializer serializer) { }
-    public override Entity ReadJson(JsonReader reader, Type _t, Entity _e, bool _b, JsonSerializer _s) =>
-      entityRemap.Where(e => e.old == JToken.Load(reader).ToObject<Entity>())
+    public override Entity ReadJson(JsonReader reader, Type _t, Entity _e, bool _b, JsonSerializer _s) {
+      var referenced = ((JObject)JToken.Load(reader)).ToObject<Entity>();
+      return entityRemap
+        .Where(e => e.old == referenced)
         .Select(e => e.created)
         .Single();
+    }
   }
 
   internal static class EntityConverter {
