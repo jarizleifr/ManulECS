@@ -1,3 +1,5 @@
+using System.Xml;
+using System.Reflection.Metadata;
 using System;
 using System.Collections.Generic;
 
@@ -5,149 +7,144 @@ namespace ManulECS {
   public class SparseAttribute : Attribute { }
   public class DenseAttribute : Attribute { }
 
-  public interface IComponentPool {
-    int Version { get; }
-    int Count { get; }
-    Flag Flag { get; }
-    bool Has(uint id);
-    object Get(uint id);
-    void Remove(uint id);
-    void Clone(uint origin, uint target);
-    Span<uint> GetIndices();
+  public abstract class ComponentPool {
+    internal int Version { get; set; } = 0;
+    internal int Count { get; set; } = 0;
+    internal Flag Flag { get; init; }
+    internal abstract Span<uint> Indices { get; }
+    internal abstract bool Has(in Entity entity);
+    internal abstract object Get(in Entity entity);
+    internal abstract void Remove(in Entity entity);
+    internal abstract void Clone(in Entity origin, in Entity target);
+    internal abstract void Clear();
+    internal abstract void Reset();
 
-    ///<summary>Clear all components in pool.<summary/>
-    void Clear();
+    public ComponentPool() => Reset();
   }
 
-  public interface IReadPool<T> {
-    ref T GetRef(Entity entity);
-    ref T this[Entity entity] { get; }
-  }
+  public abstract class ComponentPool<T> : ComponentPool where T : struct {
+    protected uint[] ids;
+    protected T[] components;
 
-  public interface IComponentPool<T> : IComponentPool, IReadPool<T> {
-    ref T GetRef(uint index);
-    ref T this[uint key] { get; }
-    void Set(uint id, in T component);
-    Span<T> GetComponents();
-  }
+    internal override Span<uint> Indices => ids.AsSpan(0, Count);
+    internal Span<T> Components => components.AsSpan(0, Count);
 
-  public abstract class PairList<T1, T2>
-  where T1 : struct
-  where T2 : struct {
-    protected T1[] items;
-    protected T2[] items2;
-
-    public int Count { get; protected set; }
-
-    public PairList() => Initialize();
-
-    protected void Initialize() {
+    internal override void Reset() {
+      ids = new uint[4];
+      components = new T[4];
+      Version = 0;
       Count = 0;
-      items = new T1[4];
-      items2 = new T2[4];
     }
 
-    protected void AddEntry(in T1 item, in T2 item2) {
-      if (Count == items.Length) {
-        Array.Resize(ref items, items.Length * 2);
-        Array.Resize(ref items2, items2.Length * 2);
+    protected void AddEntry(uint id, T component) {
+      while (Count >= ids.Length) {
+        Array.Resize(ref ids, ids.Length * 2);
+        Array.Resize(ref components, components.Length * 2);
       }
 
-      items[Count] = item;
-      items2[Count] = item2;
+      ids[Count] = id;
+      components[Count] = component;
       Count++;
     }
 
-    protected void UpdateEntry(uint index, in T1 item, in T2 item2) {
-      items[index] = item;
-      items2[index] = item2;
+    protected void UpdateEntry(uint index, uint id, T component) {
+      ids[index] = id;
+      components[index] = component;
     }
 
     protected void ReplaceEntryWithLast(uint index) {
       Count--;
-      items[index] = items[Count];
-      items2[index] = items2[Count];
+      ids[index] = ids[Count];
+      components[index] = components[Count];
     }
 
     protected void Swap(uint index, uint index2) {
-      (T1 tempItem, T2 tempItem2) = (items[index], items2[index]);
-      items[index] = items[index2];
-      items2[index] = items2[index2];
+      (uint tempItem, T tempItem2) = (ids[index], components[index]);
+      ids[index] = ids[index2];
+      components[index] = components[index2];
 
-      items[index2] = tempItem;
-      items2[index2] = tempItem2;
+      ids[index2] = tempItem;
+      components[index2] = tempItem2;
     }
+
+    internal abstract void Set(in Entity entity, T component);
+
+    public abstract ref T GetRef(in Entity entity);
+    public abstract ref T this[in Entity entity] { get; }
   }
 
   /// <summary>
   /// Sparse set backed with an array. Use for common components. Uses more memory, but is faster.
   /// </summary>
-  public class SparseComponentPool<T> : PairList<uint, T>, IComponentPool<T> where T : struct {
-    private uint[] mapping = new uint[4];
+  public class SparseComponentPool<T> : ComponentPool<T> where T : struct {
+    private uint[] mapping;
 
-    public Flag Flag { get; init; }
-    public int Version { get; private set; } = 0;
+    public SparseComponentPool(Flag flag) => Flag = flag;
 
-    public SparseComponentPool(Flag flag) {
-      Flag = flag;
+    internal override void Reset() {
+      mapping = new uint[4];
       Array.Fill(mapping, Entity.NULL_ID);
+      base.Reset();
     }
 
-    public Span<uint> GetIndices() => new(items, 0, Count);
-    public Span<T> GetComponents() => new(items2, 0, Count);
-
     /// <summary>
-    /// Get reference of value. This WILL throw exception if not found.
+    /// Get a ref of component. This WILL throw exception if not found.
     /// </summary>
-    public ref T GetRef(Entity entity) => ref items2[mapping[entity.Id]];
-    public ref T GetRef(uint key) => ref items2[mapping[key]];
+    public override ref T GetRef(in Entity entity) => ref components[mapping[entity.Id]];
+    /// <summary>
+    /// Get a ref of component. This WILL throw exception if not found.
+    /// </summary>
+    public override ref T this[in Entity entity] => ref components[mapping[entity.Id]];
 
-    public ref T this[Entity entity] => ref items2[mapping[entity.Id]];
-    public ref T this[uint key] => ref items2[mapping[key]];
+    internal override bool Has(in Entity entity) =>
+      entity.Id < mapping.Length &&
+      mapping[entity.Id] != Entity.NULL_ID;
 
-    public bool Has(uint index) => index < mapping.Length && mapping[index] != Entity.NULL_ID;
-
-    public void Set(uint index, in T item) {
+    internal override void Set(in Entity entity, T item) {
       Version++;
-
-      if (index >= mapping.Length) {
-        Util.ResizeArray(index, ref mapping, Entity.NULL_ID);
+      var id = entity.Id;
+      if (id >= mapping.Length) {
+        Util.ResizeArray(id, ref mapping, Entity.NULL_ID);
       }
 
-      var key = mapping[index];
+      var key = mapping[id];
       if (key != Entity.NULL_ID) {
-        UpdateEntry(key, index, item);
+        UpdateEntry(key, id, item);
         return;
       }
 
-      mapping[index] = (uint)Count;
-      AddEntry(index, item);
+      mapping[id] = (uint)Count;
+      AddEntry(id, item);
     }
 
-    public void Remove(uint index) {
+    internal override void Remove(in Entity entity) {
       Version++;
-      if (index < mapping.Length) {
-        ref var key = ref mapping[index];
+      var id = entity.Id;
+      if (id < mapping.Length) {
+        ref var key = ref mapping[id];
         if (key != Entity.NULL_ID) {
           if (key == Count - 1) {
             key = Entity.NULL_ID;
             Count--;
           } else {
             ReplaceEntryWithLast(key);
-            mapping[items[Count]] = key;
+            mapping[ids[Count]] = key;
             key = Entity.NULL_ID;
           }
         }
       }
     }
 
-    public void Clone(uint origin, uint target) => Set(target, GetRef(origin));
+    internal override void Clone(in Entity origin, in Entity target) =>
+      Set(target, GetRef(origin));
 
-    public object Get(uint index) => Has(index) ? items2[mapping[index]] : null;
+    internal override object Get(in Entity entity) => Has(entity)
+      ? components[mapping[entity.Id]]
+      : null;
 
-    public void Clear() {
+    internal override void Clear() {
       Version++;
-      Initialize();
+      Count = 0;
       Array.Fill(mapping, Entity.NULL_ID);
     }
   }
@@ -155,97 +152,108 @@ namespace ManulECS {
   /// <summary>
   /// Sparse set backed with a dictionary mapping. Use for rare components. Slower, but more memory efficient.
   /// </summary>
-  public class DenseComponentPool<T> : PairList<uint, T>, IComponentPool<T> where T : struct {
+  public class DenseComponentPool<T> : ComponentPool<T> where T : struct {
     private readonly Dictionary<uint, uint> mapping = new();
-
-    public int Version { get; private set; } = 0;
-    public Flag Flag { get; init; }
 
     public DenseComponentPool(Flag flag) => Flag = flag;
 
-    public Span<uint> GetIndices() => items.AsSpan(0, Count);
-    public Span<T> GetComponents() => items2.AsSpan(0, Count);
+    internal override void Reset() {
+      mapping.Clear();
+      base.Reset();
+    }
 
     /// <summary>
     /// Get reference of value. This WILL throw exception if not found.
     /// </summary>
-    public ref T GetRef(Entity entity) => ref items2[mapping[entity.Id]];
-    public ref T GetRef(uint index) => ref items2[mapping[index]];
-    public ref T this[Entity entity] => ref items2[mapping[entity.Id]];
-    public ref T this[uint index] => ref items2[mapping[index]];
+    public override ref T GetRef(in Entity entity) => ref components[mapping[entity.Id]];
+    public override ref T this[in Entity entity] => ref components[mapping[entity.Id]];
 
-    public bool Has(uint index) => mapping.ContainsKey(index);
+    internal override bool Has(in Entity entity) => mapping.ContainsKey(entity.Id);
 
-    public void Set(uint index, in T item) {
+    internal override void Set(in Entity entity, T item) {
       Version++;
-      if (mapping.TryGetValue(index, out var key)) {
-        UpdateEntry(key, index, item);
+      var id = entity.Id;
+      if (mapping.TryGetValue(id, out var key)) {
+        UpdateEntry(key, id, item);
       } else {
-        mapping.Add(index, (uint)Count);
-        AddEntry(index, item);
+        mapping.Add(id, (uint)Count);
+        AddEntry(id, item);
       }
     }
 
-    public void Remove(uint index) {
+    internal override void Remove(in Entity entity) {
       Version++;
-      if (mapping.TryGetValue(index, out var key)) {
+      var id = entity.Id;
+      if (mapping.TryGetValue(id, out var key)) {
         if (key == Count - 1) {
-          mapping.Remove(index);
+          mapping.Remove(id);
           Count--;
         } else {
           ReplaceEntryWithLast(key);
-          mapping[items[Count]] = key;
-          mapping.Remove(index);
+          mapping[ids[Count]] = key;
+          mapping.Remove(id);
         }
       }
     }
 
-    public void Clone(uint origin, uint target) => Set(target, GetRef(origin));
+    internal override void Clone(in Entity origin, in Entity target) =>
+      Set(target, GetRef(origin));
 
-    public object Get(uint index) => Has(index) ? items2[mapping[index]] : null;
+    internal override object Get(in Entity entity) => Has(entity)
+      ? components[mapping[entity.Id]]
+      : null;
 
-    public void Clear() {
+    internal override void Clear() {
       Version++;
-      Initialize();
+      Count = 0;
       mapping.Clear();
     }
   }
 
-  public class TagPool<T> : IComponentPool where T : struct {
-    // Use a dummy component for serialization
-    private readonly T dummy = default;
-    private uint[] ids = new uint[4];
+  public class TagPool<T> : ComponentPool where T : struct {
+    private static readonly T dummy = default; // Used for serialization
+    private uint[] ids;
 
-    public Flag Flag { get; init; }
-    public int Version { get; private set; } = 0;
-    public int Count { get; private set; } = 0;
+    public TagPool(Flag flag) => Flag = flag;
 
-    public TagPool(Flag flag) {
-      Flag = flag;
+    internal override void Reset() {
+      ids = new uint[4];
       Array.Fill(ids, Entity.NULL_ID);
+      Count = 0;
+      Version = 0;
     }
 
-    public bool Has(uint id) => FindIndex(id) != -1;
+    internal override Span<uint> Indices => ids.AsSpan(0, Count);
 
-    public object Get(uint id) => dummy;
+    internal override bool Has(in Entity entity) => FindIndex(entity) != -1;
 
-    public void Set(uint id) {
-      Version++;
-      if (Count == ids.Length) {
-        Array.Resize(ref ids, ids.Length * 2);
+    internal override object Get(in Entity _) => dummy;
+
+    internal void Set(in Entity entity) {
+      if (!Has(entity)) {
+        Version++;
+        while (Count >= ids.Length) {
+          Array.Resize(ref ids, ids.Length * 2);
+        }
+        ids[Count++] = entity.Id;
       }
-      ids[Count++] = id;
     }
 
-    public void Remove(uint id) {
+    internal override void Remove(in Entity entity) {
       Version++;
-      var index = FindIndex(id);
+      var index = FindIndex(entity);
       if (index != -1) {
-        ids[index] = ids[--Count];
+        if (index == Count - 1) {
+          ids[index] = Entity.NULL_ID;
+          Count--;
+        } else {
+          ids[index] = ids[--Count];
+          ids[Count] = Entity.NULL_ID;
+        }
       }
     }
 
-    public void Clone(uint origin, uint target) {
+    internal override void Clone(in Entity origin, in Entity target) {
       if (Has(origin)) {
         Set(target);
       } else {
@@ -253,10 +261,14 @@ namespace ManulECS {
       }
     }
 
-    public Span<uint> GetIndices() => ids.AsSpan(0, Count);
+    internal override void Clear() {
+      Version++;
+      Count = 0;
+      Array.Fill(ids, Entity.NULL_ID);
+    }
 
-    public void Clear() => (Version, Count) = (Version + 1, 0);
-
-    private int FindIndex(uint id) => Array.FindIndex(ids, (i) => i == id);
+    private int FindIndex(Entity entity) => Array.FindIndex(ids, (i) =>
+      i == entity.Id && i != Entity.NULL_ID
+    );
   }
 }

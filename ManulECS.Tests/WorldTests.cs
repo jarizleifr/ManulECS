@@ -48,7 +48,7 @@ namespace ManulECS.Tests {
     [Fact]
     public void RegisteringTag_ResultsInTagPool() {
       world.Declare<TagComp>();
-      var tagPool = world.components.GetTagPool<TagComp>();
+      var tagPool = world.GetTagPool<TagComp>();
       Assert.IsType<TagPool<TagComp>>(tagPool);
     }
 
@@ -78,7 +78,7 @@ namespace ManulECS.Tests {
     [Fact]
     public void ComponentCountReturnsZero_AfterRemovingComponents() {
       world.Clear<Comp1>();
-      Assert.Equal(0, world.components.GetPool<Comp1>().Count);
+      Assert.Equal(0, world.GetPool<Comp1>().Count);
     }
 
     [Fact]

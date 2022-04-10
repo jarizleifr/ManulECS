@@ -6,13 +6,18 @@ namespace ManulECS {
     public const int MAX_SIZE = 4;
     private fixed uint u[MAX_SIZE];
 
-    public FlagEnum(params Flag[] flags) {
-      foreach (var flag in flags) {
-        this[flag] = true;
-      }
-    }
+    public FlagEnum(in Flag f1) =>
+      this[f1] = true;
+    public FlagEnum(in Flag f1, in Flag f2) =>
+      (this[f1], this[f2]) = (true, true);
+    public FlagEnum(in Flag f1, in Flag f2, in Flag f3) =>
+      (this[f1], this[f2], this[f3]) = (true, true, true);
+    public FlagEnum(in Flag f1, in Flag f2, in Flag f3, in Flag f4) =>
+      (this[f1], this[f2], this[f3], this[f4]) = (true, true, true, true);
+    public FlagEnum(in Flag f1, in Flag f2, in Flag f3, in Flag f4, in Flag f5) =>
+      (this[f1], this[f2], this[f3], this[f4], this[f5]) = (true, true, true, true, true);
 
-    public bool this[Flag flag] {
+    public bool this[in Flag flag] {
       get => (u[flag.index] & flag.bits) > 0;
       set {
         var val = u[flag.index];

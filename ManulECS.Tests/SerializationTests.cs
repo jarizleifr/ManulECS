@@ -104,8 +104,8 @@ namespace ManulECS.Tests {
       world.Deserialize(json);
 
       Assert.Equal(2, world.EntityCount);
-      Assert.Equal(2, world.components.GetPool<NormalComponent1>().Count);
-      Assert.Equal(1, world.components.GetPool<NormalComponent2>().Count);
+      Assert.Equal(2, world.GetPool<NormalComponent1>().Count);
+      Assert.Equal(1, world.GetPool<NormalComponent2>().Count);
     }
 
     [Fact]
@@ -116,8 +116,8 @@ namespace ManulECS.Tests {
       world.Deserialize(json);
 
       Assert.Equal(0, world.EntityCount);
-      Assert.Equal(0, world.components.GetPool<NormalComponent1>().Count);
-      Assert.Equal(0, world.components.GetPool<NormalComponent2>().Count);
+      Assert.Equal(0, world.Count<NormalComponent1>());
+      Assert.Equal(0, world.Count<NormalComponent2>());
     }
     [Fact]
     public void ProfileEntities_SerializeAndDeserialize_Properly_WhenProfileProvided() {
@@ -128,8 +128,8 @@ namespace ManulECS.Tests {
       world.Deserialize(json);
 
       Assert.Equal(2, world.EntityCount);
-      Assert.Equal(2, world.components.GetPool<ProfileComponent1>().Count);
-      Assert.Equal(1, world.components.GetPool<ProfileComponent2>().Count);
+      Assert.Equal(2, world.Count<ProfileComponent1>());
+      Assert.Equal(1, world.Count<ProfileComponent2>());
     }
 
     [Fact]
@@ -140,8 +140,8 @@ namespace ManulECS.Tests {
       world.Deserialize(json);
 
       Assert.Equal(0, world.EntityCount);
-      Assert.Equal(0, world.components.GetPool<ProfileComponent1>().Count);
-      Assert.Equal(0, world.components.GetPool<ProfileComponent2>().Count);
+      Assert.Equal(0, world.Count<ProfileComponent1>());
+      Assert.Equal(0, world.Count<ProfileComponent2>());
     }
 
     [Fact]

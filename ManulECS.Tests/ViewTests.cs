@@ -42,7 +42,7 @@ namespace ManulECS.Tests {
       var flags = new FlagEnum(world.GetFlag<Comp1>(), world.GetFlag<Comp3>());
       var view = world.View<Comp1, Comp3>();
       var e = world.Create();
-      world.Assign<Comp1>(e, new Comp1 { });
+      world.Assign(e, new Comp1 { });
 
       Assert.True(view.IsDirty(world, flags));
     }
@@ -51,7 +51,7 @@ namespace ManulECS.Tests {
     public void RemovingComponent_DirtiesView() {
       var flags = new FlagEnum(world.GetFlag<Comp1>(), world.GetFlag<Comp2>());
       var view = world.View<Comp1, Comp2>();
-      var e = world.GetEntityByIndex(0);
+      var e = world.entities[0];
       world.Remove<Comp1>(e);
 
       Assert.True(view.IsDirty(world, flags));
@@ -61,7 +61,7 @@ namespace ManulECS.Tests {
     public void ClearingComponents_DirtiesView() {
       var flags = new FlagEnum(world.GetFlag<Comp1>(), world.GetFlag<Comp2>());
       var view = world.View<Comp1, Comp2>();
-      world.components.GetPool<Comp1>().Clear();
+      world.GetPool<Comp1>().Clear();
 
       Assert.True(view.IsDirty(world, flags));
     }
@@ -107,10 +107,10 @@ namespace ManulECS.Tests {
     public void ViewIsCached_WhenLoopedFirstTime() {
       var matcher = new FlagEnum(world.GetFlag<Comp1>(), world.GetFlag<Comp2>());
 
-      Assert.False(world.viewCache.Contains(matcher));
+      Assert.False(world.views.ContainsKey(matcher));
 
       world.View<Comp1, Comp2>();
-      Assert.True(world.viewCache.Contains(matcher));
+      Assert.True(world.views.ContainsKey(matcher));
     }
   }
 }

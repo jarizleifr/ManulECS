@@ -92,20 +92,20 @@ namespace ManulECS {
 
     private class JsonComponentReader<T> : IComponentReader where T : struct, IComponent {
       public void Set(World world, Entity entity, object component) =>
-          world.Assign(entity, (T)component);
+        world.Assign(entity, (T)component);
     }
 
     private class JsonTagReader<T> : IComponentReader where T : struct, ITag {
       public void Set(World world, Entity entity, object _) =>
-          world.Assign<T>(entity);
+        world.Assign<T>(entity);
     }
 
     public static JObject SerializeEntity(World world, string profile, Entity entity) {
       bool componentProfilePresent = false;
       var componentArray = new JArray();
       var serializer = new JsonSerializer { TypeNameHandling = TypeNameHandling.Objects };
-      foreach (var idx in world.GetEntityDataByIndex(entity.Id)) {
-        var component = world.components.GetIndexedPool(idx).Get(entity.Id);
+      foreach (var idx in world.entityFlags[entity.Id]) {
+        var component = world.indexedPools[idx].Get(entity);
         var type = component.GetType();
         if (DiscardComponent(type)) continue;
         if (DiscardEntity(type)) return null;

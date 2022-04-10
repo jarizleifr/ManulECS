@@ -3,89 +3,105 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace ManulECS {
-  public partial class World : PairList<Entity, FlagEnum> {
-    internal Components components = new();
-    internal Dictionary<Type, object> resources = new();
-    internal ViewCache viewCache = new();
-
+  public partial class World {
     private uint destroyed = Entity.NULL_ID;
     private uint nextEntityId = 0;
 
-    internal IEnumerable<Entity> Entities => nextEntityId != 0
-      ? items.Where((entity, index) => entity.Id == index)
-      : Enumerable.Empty<Entity>();
+    internal Entity[] entities = new Entity[4];
+    internal FlagEnum[] entityFlags = new FlagEnum[4];
 
-    public int EntityCount => Entities.Count();
+    internal readonly Dictionary<Type, object> resources = new();
 
-    public bool IsAlive(Entity entity) {
-      var entityInSlot = items[entity.Id];
-      return entityInSlot.Id != Entity.NULL_ID && entityInSlot == entity;
-    }
-
-    internal Entity GetEntityByIndex(uint index) => items[index];
-    internal ref FlagEnum GetEntityDataByIndex(uint index) => ref items2[index];
-
-    internal Flag GetFlag<T>() where T : struct =>
-        components.GetFlag<T>();
-
+    /// <summary>
+    /// Creates a new empty Entity. 
+    /// </summary>
     public Entity Create() {
+      Entity entity;
       if (destroyed == Entity.NULL_ID) {
-        var entity = new Entity(nextEntityId, 0);
-        AddEntry(entity, default);
+        entity = new Entity(nextEntityId, 0);
+        if (nextEntityId == entities.Length) {
+          Array.Resize(ref entities, entities.Length * 2);
+          Array.Resize(ref entityFlags, entityFlags.Length * 2);
+        }
+        entities[nextEntityId] = entity;
+        entityFlags[nextEntityId] = default;
         nextEntityId++;
-        return entity;
       } else {
-        var index = destroyed;
-        var oldEntity = items[index];
-
-        var entity = new Entity(destroyed, oldEntity.Version);
-        UpdateEntry(index, entity, default);
-
+        var oldEntity = entities[destroyed];
+        entity = new Entity(destroyed, oldEntity.Version);
+        entities[destroyed] = entity;
+        entityFlags[destroyed] = default;
         destroyed = oldEntity.Id;
-        return entity;
       }
+      return entity;
     }
 
-    public bool Remove(Entity entity) {
-      if (!IsAlive(entity)) return false;
+    /// <summary>
+    /// Creates a new empty Entity wrapped in an EntityHandle, which can be used
+    /// to concisely build an Entity out of multiple components in sequence.
+    /// </summary>
+    public EntityHandle Handle() => Handle(Create());
 
-      ref var data = ref GetEntityDataByIndex(entity.Id);
-      components.RemoveComponents(entity, data);
+    /// <summary>
+    /// Wraps an Entity in an EntityHandle, for ease of access and more concise
+    /// assignment of components and tags.
+    /// </summary>
+    public EntityHandle Handle(in Entity entity) => new() {
+      World = this,
+      Entity = entity,
+    };
 
-      items[entity.Id] = new Entity(destroyed, (byte)(entity.Version + 1));
-      data = default;
-
-      destroyed = entity.Id;
-      return true;
+    /// <summary>
+    /// Removes an existing Entity.
+    /// </summary>
+    /// <returns>
+    /// true if Entity successfully removed, false if Entity did not exist.
+    /// </returns>
+    public bool Remove(in Entity entity) {
+      if (IsAlive(entity)) {
+        ref var data = ref entityFlags[entity.Id];
+        foreach (var index in entityFlags[entity.Id]) {
+          indexedPools[index].Remove(entity);
+        }
+        entities[entity.Id] = new Entity(destroyed, (byte)(entity.Version + 1));
+        data = default;
+        destroyed = entity.Id;
+        return true;
+      }
+      return false;
     }
 
     /// <summary>Clear all entities, components and resources from the world.</summary>
     public void Clear() {
-      Initialize();
+      entities = new Entity[4];
+      entityFlags = new FlagEnum[4];
       destroyed = Entity.NULL_ID;
       nextEntityId = 0;
 
+      Array.ForEach(indexedPools, pool => pool?.Reset());
       resources.Clear();
-      components.Clear();
-      viewCache.Clear();
+      views.Clear();
     }
 
-    /// <summary>Declare a component/tag of type T for use.</summary>
-    public void Declare<T>() where T : struct, IBaseComponent => components.Register<T>();
+    public int EntityCount => Entities.Count();
 
-    public new int Count<T>() where T : struct, IBaseComponent => components.GetUntypedPool<T>().Count;
+    /// <summary>Declare a component/tag of type T for use.</summary>
+    public void Declare<T>() where T : struct, IBaseComponent =>
+      Register<T>();
+
+    public int Count<T>() where T : struct, IBaseComponent =>
+      GetUntypedPool<T>().Count;
 
     /// <summary>Check if entity has a component or tag of type T.</summary>
-    public bool Has<T>(Entity entity) where T : struct, IBaseComponent =>
-        components.GetUntypedPool<T>().Has(entity.Id);
+    public bool Has<T>(in Entity entity) where T : struct, IBaseComponent =>
+      GetUntypedPool<T>().Has(entity);
 
     /// <summary>Get mutable component reference.</summary>
-    public ref T GetRef<T>(Entity entity)
-        where T : struct, IComponent =>
-            ref components.GetPool<T>().GetRef(entity.Id);
+    public ref T GetRef<T>(in Entity entity) where T : struct, IComponent =>
+      ref GetPool<T>().GetRef(entity);
 
     /// <summary>Immutable, but safe way to getting components, even if they don't exist.</summary>
-    public bool TryGet<T>(Entity entity, out T component)
+    public bool TryGet<T>(in Entity entity, out T component)
         where T : struct, IComponent {
       if (Has<T>(entity)) {
         component = GetRef<T>(entity);
@@ -98,82 +114,81 @@ namespace ManulECS {
     /// <summary>
     /// Assigns a tag on entity. 
     /// </summary>
-    public void Assign<T>(Entity entity) where T : struct, ITag {
+    public void Assign<T>(in Entity entity) where T : struct, ITag {
       if (IsAlive(entity)) {
-        var pool = components.GetTagPool<T>();
+        var pool = GetTagPool<T>();
         var flag = pool.Flag;
-        ref var entityData = ref GetEntityDataByIndex(entity.Id);
+        ref var flags = ref entityFlags[entity.Id];
 
-        if (!entityData[flag]) {
-          entityData[flag] = true;
-          pool.Set(entity.Id);
+        if (!flags[flag]) {
+          flags[flag] = true;
+          pool.Set(entity);
         }
       }
     }
 
     /// <summary>Assign a component of type T to an entity. Does nothing if component already exists.</summary>
-    public void Assign<T>(Entity entity, in T component)
+    public void Assign<T>(in Entity entity, T component)
         where T : struct, IComponent {
       if (IsAlive(entity)) {
-        var pool = components.GetPool<T>();
+        var pool = GetPool<T>();
         var flag = pool.Flag;
-        ref var entityData = ref GetEntityDataByIndex(entity.Id);
+        ref var flags = ref entityFlags[entity.Id];
 
-        if (!entityData[flag]) {
-          entityData[flag] = true;
-          pool.Set(entity.Id, component);
+        if (!flags[flag]) {
+          flags[flag] = true;
+          pool.Set(entity, component);
         }
       }
     }
 
     /// <summary>Assign or replace a component of type T to an entity.</summary>
-    public void AssignOrReplace<T>(Entity entity, in T component)
+    public void AssignOrReplace<T>(in Entity entity, T component)
     where T : struct, IComponent {
       if (IsAlive(entity)) {
-        var pool = components.GetPool<T>();
-        var flag = pool.Flag;
-        ref var entityData = ref GetEntityDataByIndex(entity.Id);
-        entityData[flag] = true;
-        pool.Set(entity.Id, component);
+        var pool = GetPool<T>();
+        ref var flags = ref entityFlags[entity.Id];
+        flags[pool.Flag] = true;
+        pool.Set(entity, component);
       }
     }
 
     /// <summary>Remove a component/tag of type T from an entity.</summary>
-    public void Remove<T>(Entity entity) where T : struct, IBaseComponent {
+    public void Remove<T>(in Entity entity) where T : struct, IBaseComponent {
       if (IsAlive(entity)) {
-        var pool = components.GetUntypedPool<T>();
-        var flag = pool.Flag;
-        ref var entityData = ref GetEntityDataByIndex(entity.Id);
-        entityData[flag] = false;
-        pool.Remove(entity.Id);
+        var pool = GetUntypedPool<T>();
+        ref var flags = ref entityFlags[entity.Id];
+        flags[pool.Flag] = false;
+        pool.Remove(entity);
       }
     }
 
     /// <summary>Create a new copy of an entity, with all the same components and tags.</summary>
-    public Entity Clone(Entity entity) {
+    public Entity Clone(in Entity entity) {
       var clone = Create();
+      ref var cloneFlags = ref entityFlags[clone.Id];
+      cloneFlags = entityFlags[entity.Id];
 
-      var entityData = GetEntityDataByIndex(entity.Id);
-      ref var cloneData = ref GetEntityDataByIndex(clone.Id);
-
-      foreach (var idx in entityData) {
-        var pool = components.GetIndexedPool(idx);
-        pool.Clone(entity.Id, clone.Id);
-        cloneData[pool.Flag] = true;
+      foreach (var idx in cloneFlags) {
+        var pool = indexedPools[idx];
+        pool.Clone(entity, clone);
       }
       return clone;
     }
 
     /// <summary>Remove all components or tags of type T from all entities.</summary>
     public void Clear<T>() where T : struct, IBaseComponent {
-      var pool = components.GetUntypedPool<T>();
+      var pool = GetUntypedPool<T>();
       var flag = pool.Flag;
-      if (pool.Count > 0) {
-        for (int i = 0; i < items2.Length; i++) {
-          items2[i][flag] = false;
-        }
-        pool.Clear();
+      foreach (var idx in pool.Indices) {
+        entityFlags[idx][flag] = false;
       }
+      pool.Clear();
+    }
+
+    public bool IsAlive(Entity entity) {
+      var entityInSlot = entities[entity.Id];
+      return entityInSlot.Id != Entity.NULL_ID && entityInSlot == entity;
     }
 
     public T GetResource<T>() => (T)resources[typeof(T)];
@@ -187,56 +202,8 @@ namespace ManulECS {
     public string Serialize(string profile = null) => WorldSerializer.Create(this, profile);
     public void Deserialize(string json) => WorldSerializer.Apply(this, json);
 
-    public IReadPool<T1> Pools<T1>()
-        where T1 : struct, IComponent =>
-            components.GetPool<T1>();
-
-    public View View<T1>()
-        where T1 : struct, IBaseComponent =>
-            viewCache.GetView(this, new FlagEnum(GetFlag<T1>()));
-
-    public (IReadPool<T1>, IReadPool<T2>) Pools<T1, T2>()
-        where T1 : struct, IComponent
-        where T2 : struct, IComponent =>
-            (Pools<T1>(), Pools<T2>());
-
-    public View View<T1, T2>()
-        where T1 : struct, IBaseComponent
-        where T2 : struct, IBaseComponent =>
-            viewCache.GetView(this, new FlagEnum(GetFlag<T1>(), GetFlag<T2>()));
-
-    public (IReadPool<T1>, IReadPool<T2>, IReadPool<T3>) Pools<T1, T2, T3>()
-        where T1 : struct, IComponent
-        where T2 : struct, IComponent
-        where T3 : struct, IComponent =>
-            (Pools<T1>(), Pools<T2>(), Pools<T3>());
-
-    public View View<T1, T2, T3>()
-        where T1 : struct, IBaseComponent
-        where T2 : struct, IBaseComponent
-        where T3 : struct, IBaseComponent =>
-            viewCache.GetView(this, new FlagEnum(GetFlag<T1>(), GetFlag<T2>(), GetFlag<T3>()));
-
-    public (IReadPool<T1>, IReadPool<T2>, IReadPool<T3>, IReadPool<T4>) Pools<T1, T2, T3, T4>()
-        where T1 : struct, IComponent
-        where T2 : struct, IComponent
-        where T3 : struct, IComponent
-        where T4 : struct, IComponent =>
-            (Pools<T1>(), Pools<T2>(), Pools<T3>(), Pools<T4>());
-
-    public View View<T1, T2, T3, T4>()
-        where T1 : struct, IBaseComponent
-        where T2 : struct, IBaseComponent
-        where T3 : struct, IBaseComponent
-        where T4 : struct, IBaseComponent =>
-            viewCache.GetView(this, new FlagEnum(GetFlag<T1>(), GetFlag<T2>(), GetFlag<T3>(), GetFlag<T4>()));
-
-    public View View<T1, T2, T3, T4, T5>()
-        where T1 : struct, IBaseComponent
-        where T2 : struct, IBaseComponent
-        where T3 : struct, IBaseComponent
-        where T4 : struct, IBaseComponent
-        where T5 : struct, IBaseComponent =>
-          viewCache.GetView(this, new FlagEnum(GetFlag<T1>(), GetFlag<T2>(), GetFlag<T3>(), GetFlag<T4>(), GetFlag<T5>()));
+    internal IEnumerable<Entity> Entities => nextEntityId != 0
+      ? entities.Where((entity, index) => entity.Id == index)
+      : Enumerable.Empty<Entity>();
   }
 }

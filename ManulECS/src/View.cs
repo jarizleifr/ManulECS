@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 
 namespace ManulECS {
@@ -6,16 +5,16 @@ namespace ManulECS {
     private readonly List<Entity> entities;
     private readonly int[] versions = new int[8];
 
-    public View(World world, FlagEnum matcher) {
+    internal View(World world, FlagEnum matcher) {
       entities = new List<Entity>();
       Update(world, matcher);
     }
 
     ///<summary>Checks if any of the assigned pools has changed.</summary>
-    public bool IsDirty(World world, FlagEnum matcher) {
+    internal bool IsDirty(World world, FlagEnum matcher) {
       int v = 0;
       foreach (var idx in matcher) {
-        var pool = world.components.GetIndexedPool(idx);
+        var pool = world.indexedPools[idx];
         if (versions[v++] != pool.Version) {
           return true;
         }
@@ -23,23 +22,23 @@ namespace ManulECS {
       return false;
     }
 
-    public void Update(World world, FlagEnum matcher) {
-      int v = 0;
-      Span<uint> smallestSet = null;
-      foreach (var idx in matcher) {
-        var pool = world.components.GetIndexedPool(idx);
-        if (smallestSet == null || smallestSet.Length > pool.Count) {
-          versions[v++] = pool.Version;
-          smallestSet = pool.GetIndices();
+    internal void Update(World world, FlagEnum matcher) {
+      if (IsDirty(world, matcher)) {
+        int v = 0;
+        ComponentPool smallest = null;
+        foreach (var idx in matcher) {
+          var pool = world.indexedPools[idx];
+          if (smallest == null || smallest.Count > pool.Count) {
+            versions[v++] = pool.Version;
+            smallest = pool;
+          }
         }
-      }
-
-      entities.Clear();
-      foreach (var id in smallestSet) {
-        var entityData = world.GetEntityDataByIndex(id);
-        if (entityData.IsSubsetOf(matcher)) {
-          var entity = world.GetEntityByIndex(id);
-          entities.Add(entity);
+        entities.Clear();
+        foreach (var id in smallest.Indices) {
+          if (world.entityFlags[id].IsSubsetOf(matcher)) {
+            var entity = world.entities[id];
+            entities.Add(entity);
+          }
         }
       }
     }
@@ -49,36 +48,13 @@ namespace ManulECS {
       private int index;
 
       internal ViewEnumerator(List<Entity> entities) =>
-          (this.entities, index) = (entities, -1);
+        (this.entities, index) = (entities, -1);
 
       public Entity Current => entities[index];
-
       public bool MoveNext() => ++index < entities.Count;
-
       public void Reset() => index = -1;
     }
 
     public ViewEnumerator GetEnumerator() => new(entities);
-  }
-
-  public class ViewCache {
-    private readonly Dictionary<FlagEnum, View> views = new();
-
-    public bool Contains(FlagEnum matcher) => views.ContainsKey(matcher);
-
-    public View GetView(World world, FlagEnum matcher) {
-      if (views.TryGetValue(matcher, out View existingView)) {
-        if (existingView.IsDirty(world, matcher)) {
-          existingView.Update(world, matcher);
-        }
-        return existingView;
-      } else {
-        var view = new View(world, matcher);
-        views.Add(matcher, view);
-        return view;
-      }
-    }
-
-    public void Clear() => views.Clear();
   }
 }

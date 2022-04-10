@@ -143,12 +143,12 @@ namespace ManulECS.Tests {
       var c1 = world.GetRef<Component1>(clone);
       var c2 = world.GetRef<Component2>(clone);
 
-      var d1 = world.GetEntityDataByIndex(origin.Id);
-      var d2 = world.GetEntityDataByIndex(clone.Id);
+      var d1 = world.entityFlags[origin.Id];
+      var d2 = world.entityFlags[clone.Id];
 
       Assert.Equal(d1, d2);
-      Assert.Equal(2, world.components.GetPool<Component1>().Count);
-      Assert.Equal(2, world.components.GetPool<Component2>().Count);
+      Assert.Equal(2, world.GetPool<Component1>().Count);
+      Assert.Equal(2, world.GetPool<Component2>().Count);
       Assert.Equal(42, c1.value);
       Assert.Equal(127, c2.value);
     }
