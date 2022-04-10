@@ -22,6 +22,7 @@ namespace ManulECS.Benchmark {
         world.Assign<TestTag2>(e);
       }
 
+      foreach (var _ in world.View<TestTag1>()) { }
       foreach (var _ in world.View<TestTag1, TestTag2>()) { }
     }
 

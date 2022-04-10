@@ -37,17 +37,19 @@ namespace ManulECS.Benchmark {
 
     [Benchmark]
     public void Update1Component() {
+      var positions = world.Pools<DensePos>();
       foreach (var e in world.View<DensePos>()) {
-        ref var pos = ref world.GetRef<DensePos>(e);
+        ref var pos = ref positions[e];
         pos.x += 1;
       }
     }
 
     [Benchmark]
     public void Update2Components() {
+      var (positions, moves) = world.Pools<DensePos, DenseMove>();
       foreach (var e in world.View<DensePos, DenseMove>()) {
-        ref var pos = ref world.GetRef<DensePos>(e);
-        ref var mov = ref world.GetRef<DenseMove>(e);
+        ref var pos = ref positions[e];
+        ref var mov = ref moves[e];
         pos.x += mov.mx;
         pos.y += mov.my;
       }

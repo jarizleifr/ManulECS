@@ -35,18 +35,19 @@ namespace ManulECS.Benchmark {
 
     [Benchmark]
     public void Update1Component() {
+      var positions = world.Pools<SparsePos>();
       foreach (var e in world.View<SparsePos, SparseMove>()) {
-        ref var pos = ref world.GetRef<SparsePos>(e);
+        ref var pos = ref positions[e];
         pos.x += 1;
       }
     }
 
     [Benchmark]
     public void Update2Components() {
-
+      var (positions, moves) = world.Pools<SparsePos, SparseMove>();
       foreach (var e in world.View<SparsePos, SparseMove>()) {
-        ref var pos = ref world.GetRef<SparsePos>(e);
-        ref var mov = ref world.GetRef<SparseMove>(e);
+        ref var pos = ref positions[e];
+        ref var mov = ref moves[e];
         pos.x += mov.mx;
         pos.y += mov.my;
       }
