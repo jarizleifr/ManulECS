@@ -31,7 +31,7 @@ namespace ManulECS {
 
     internal void Clear() => Array.ForEach(indexedPools, pool => pool?.Clear());
 
-    internal void RemoveComponents(Entity entity, in FlagEnum flags) {
+    internal void RemoveComponents(Entity entity, FlagEnum flags) {
       foreach (var index in flags) {
         indexedPools[index].Remove(entity.Id);
       }

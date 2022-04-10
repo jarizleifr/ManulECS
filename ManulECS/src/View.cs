@@ -6,13 +6,13 @@ namespace ManulECS {
     private readonly List<Entity> entities;
     private readonly int[] versions = new int[8];
 
-    public View(World world, in FlagEnum matcher) {
+    public View(World world, FlagEnum matcher) {
       entities = new List<Entity>();
       Update(world, matcher);
     }
 
     ///<summary>Checks if any of the assigned pools has changed.</summary>
-    public bool IsDirty(World world, in FlagEnum matcher) {
+    public bool IsDirty(World world, FlagEnum matcher) {
       int v = 0;
       foreach (var idx in matcher) {
         var pool = world.components.GetIndexedPool(idx);
@@ -23,7 +23,7 @@ namespace ManulECS {
       return false;
     }
 
-    public void Update(World world, in FlagEnum matcher) {
+    public void Update(World world, FlagEnum matcher) {
       int v = 0;
       Span<uint> smallestSet = null;
       foreach (var idx in matcher) {
@@ -64,9 +64,9 @@ namespace ManulECS {
   public class ViewCache {
     private readonly Dictionary<FlagEnum, View> views = new();
 
-    public bool Contains(in FlagEnum matcher) => views.ContainsKey(matcher);
+    public bool Contains(FlagEnum matcher) => views.ContainsKey(matcher);
 
-    public View GetView(World world, in FlagEnum matcher) {
+    public View GetView(World world, FlagEnum matcher) {
       if (views.TryGetValue(matcher, out View existingView)) {
         if (existingView.IsDirty(world, matcher)) {
           existingView.Update(world, matcher);
