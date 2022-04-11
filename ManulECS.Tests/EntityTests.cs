@@ -19,7 +19,7 @@ namespace ManulECS.Tests {
       world.Create();
       world.Create();
 
-      Assert.Equal(3, world.Count);
+      Assert.Equal(3, world.EntityCount);
     }
 
     [Fact]
@@ -39,7 +39,7 @@ namespace ManulECS.Tests {
         world.Create();
       }
 
-      Assert.Equal(256, world.Count);
+      Assert.Equal(256, world.EntityCount);
     }
 
     [Fact]
