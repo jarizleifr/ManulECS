@@ -1,63 +1,55 @@
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Engines;
 
 namespace ManulECS.Benchmark {
   [MemoryDiagnoser]
-  public class RemoveEntity {
-    public struct Comp1 : IComponent { }
-    public struct Comp2 : IComponent { }
-    public struct Tag1 : IComponent { }
-    public struct Tag2 : IComponent { }
-
-    [Params(10000, 100000)]
+  [SimpleJob(RunStrategy.Throughput, invocationCount: 1)]
+  public class RemoveEntity : BaseBenchmark {
+    [Params(10000000)]
     public int N;
-
-    private World world;
-    private Entity testEntity;
 
     [IterationSetup]
     public void Setup() {
-      world = new World();
-      world.Declare<Comp1>();
-      world.Declare<Comp2>();
-      world.Declare<Tag1>();
-      world.Declare<Tag2>();
-
       for (int i = 0; i < N; i++) {
-        var e = world.Create();
-        world.Assign(e, new Comp1 { });
-        world.Assign(e, new Comp2 { });
-        world.Assign(e, new Tag1 { });
-        world.Assign(e, new Tag2 { });
-
-        if (i == 0) {
-          testEntity = e;
-        }
+        world.Handle()
+          .Assign(new SparsePos { }).Assign(new SparseMove { })
+          .Assign(new DensePos { }).Assign(new DenseMove { })
+          .Tag<SparseTag1>().Tag<SparseTag2>()
+          .Tag<DenseTag1>().Tag<DenseTag2>();
       }
     }
-
     [IterationCleanup]
-    public void Cleanup() => world = null;
+    public void Cleanup() => world.Clear();
 
     [Benchmark]
-    public void Remove1ComponentFromEntity() {
-      world.Remove<Comp1>(testEntity);
+    public void Remove1SparseComponentFromEntities() => Remove1<SparsePos>();
+    [Benchmark]
+    public void Remove2SparseComponentsFromEntities() => Remove2<SparsePos, SparseMove>();
+    [Benchmark]
+    public void Remove1DenseComponentFromEntities() => Remove1<DensePos>();
+    [Benchmark]
+    public void Remove2DenseComponentsFromEntities() => Remove2<DensePos, DenseMove>();
+    [Benchmark]
+    public void Remove1SparseTagFromEntities() => Remove1<SparseTag1>();
+    [Benchmark]
+    public void Remove2SparseTagFromEntities() => Remove2<SparseTag1, SparseTag2>();
+    [Benchmark]
+    public void Remove1DenseTagFromEntities() => Remove1<DenseTag1>();
+    [Benchmark]
+    public void Remove2DenseTagFromEntities() => Remove2<DenseTag1, DenseTag2>();
+
+    private void Remove1<T>() where T : struct, IBaseComponent {
+      for (int i = 0; i < N; i++) {
+        world.Remove<T>(world.entities[i]);
+      }
     }
-
-    [Benchmark]
-    public void Remove2ComponentsFromEntity() {
-      world.Remove<Comp1>(testEntity);
-      world.Remove<Comp2>(testEntity);
-    }
-
-    [Benchmark]
-    public void Remove1TagFromEntity() {
-      world.Remove<Tag1>(testEntity);
-    }
-
-    [Benchmark]
-    public void Remove2TagFromEntity() {
-      world.Remove<Tag1>(testEntity);
-      world.Remove<Tag2>(testEntity);
+    private void Remove2<T1, T2>()
+      where T1 : struct, IBaseComponent
+      where T2 : struct, IBaseComponent {
+      for (int i = 0; i < N; i++) {
+        world.Remove<T1>(world.entities[i]);
+        world.Remove<T2>(world.entities[i]);
+      }
     }
   }
 }

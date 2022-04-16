@@ -1,55 +1,15 @@
-using System;
 using Xunit;
 
 namespace ManulECS.Tests {
-  public struct NormalComponent1 : IComponent { }
-  public struct NormalComponent2 : IComponent { }
-
-  [SerializationProfile("test-profile")]
-  public struct ProfileComponent1 : IComponent { }
-
-  [SerializationProfile("test-profile")]
-  public struct ProfileComponent2 : IComponent { }
-
-  [NeverSerializeComponent]
-  public struct ShouldNeverAppear : IComponent { }
-
-  [NeverSerializeEntity]
-  public struct EntityShouldNeverAppear : IComponent { }
-
-  public struct ComponentWithReference1 : IComponent {
-    public Entity entity;
-  }
-
-  public struct ComponentWithReference2 : IComponent {
-    public Entity entity;
-  }
-
-  public class SerializationTests {
-    private readonly World world;
-
-    public SerializationTests() {
-      world = new World();
-      world.Declare<NormalComponent1>();
-      world.Declare<NormalComponent2>();
-
-      world.Declare<ProfileComponent1>();
-      world.Declare<ProfileComponent2>();
-
-      world.Declare<ShouldNeverAppear>();
-      world.Declare<EntityShouldNeverAppear>();
-
-      world.Declare<ComponentWithReference1>();
-      world.Declare<ComponentWithReference2>();
-    }
-
+  [Collection("World")]
+  public class SerializationTests : TestContext {
     private void CreateNormalEntities() {
       var e1 = world.Create();
-      world.Assign(e1, new NormalComponent1 { });
+      world.Assign(e1, new Component1 { });
 
       var e2 = world.Create();
-      world.Assign(e2, new NormalComponent1 { });
-      world.Assign(e2, new NormalComponent2 { });
+      world.Assign(e2, new Component1 { });
+      world.Assign(e2, new Component2 { });
     }
 
     private void CreateProfileEntities() {
@@ -63,11 +23,12 @@ namespace ManulECS.Tests {
 
     private void CreateDiscardingEntities() {
       var e1 = world.Create();
-      world.Assign(e1, new NormalComponent1 { });
+      world.Assign(e1, new Component1 { });
+      world.Assign(e1, new DiscardComponent { });
 
       var e2 = world.Create();
-      world.Assign(e2, new NormalComponent1 { });
-      world.Assign(e2, new NormalComponent2 { });
+      world.Assign(e2, new Component1 { });
+      world.Assign(e2, new DiscardEntity { });
     }
 
     private void CreateEntitiesWithReferencedComponents() {
@@ -75,11 +36,11 @@ namespace ManulECS.Tests {
         var e = world.Create();
 
         if (i % 2 == 0) {
-          world.Assign(e, new NormalComponent1 { });
+          world.Assign(e, new Component1 { });
           var item = world.Create();
           world.Assign(item, new ComponentWithReference1 { entity = e });
         } else {
-          world.Assign(e, new NormalComponent2 { });
+          world.Assign(e, new Component2 { });
           var item = world.Create();
           world.Assign(item, new ComponentWithReference2 { entity = e });
         }
@@ -87,7 +48,7 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void Entities_WithoutComponents_WillNotSerialize() {
+    public void WontSerialize_EmptyEntities() {
       for (int i = 0; i < 10; i++) world.Create();
       var json = world.Serialize();
       world.Clear();
@@ -96,7 +57,7 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void NormalEntities_SerializeAndDeserialize_Properly() {
+    public void SerializesAndDeserializes_Entities() {
       CreateNormalEntities();
       CreateProfileEntities();
       var json = world.Serialize();
@@ -104,23 +65,36 @@ namespace ManulECS.Tests {
       world.Deserialize(json);
 
       Assert.Equal(2, world.EntityCount);
-      Assert.Equal(2, world.GetPool<NormalComponent1>().Count);
-      Assert.Equal(1, world.GetPool<NormalComponent2>().Count);
+      Assert.Equal(2, world.Pool<Component1>().Count);
+      Assert.Equal(1, world.Pool<Component2>().Count);
     }
 
     [Fact]
-    public void NormalEntities_WillNotSerialize_WhenProfileProvided() {
+    public void Omits_OnOmitAttribute() {
+      CreateDiscardingEntities();
+      var json = world.Serialize();
+      world.Clear();
+      world.Deserialize(json);
+
+      Assert.Equal(1, world.EntityCount);
+      Assert.Equal(1, world.Count<Component1>());
+      Assert.Equal(0, world.Count<DiscardEntity>());
+      Assert.Equal(0, world.Count<DiscardComponent>());
+    }
+
+    [Fact]
+    public void WontSerialize_OnClashingProfile() {
       CreateNormalEntities();
       var json = world.Serialize("test-profile");
       world.Clear();
       world.Deserialize(json);
 
       Assert.Equal(0, world.EntityCount);
-      Assert.Equal(0, world.Count<NormalComponent1>());
-      Assert.Equal(0, world.Count<NormalComponent2>());
+      Assert.Equal(0, world.Count<Component1>());
+      Assert.Equal(0, world.Count<Component2>());
     }
     [Fact]
-    public void ProfileEntities_SerializeAndDeserialize_Properly_WhenProfileProvided() {
+    public void SerializesAndDeserializes_OnMatchingProfile() {
       CreateNormalEntities();
       CreateProfileEntities();
       var json = world.Serialize("test-profile");
@@ -133,7 +107,7 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void ProfileEntities_WillNotSerialize_WithoutProfile() {
+    public void WontSerialize_OnMissingProfile() {
       CreateProfileEntities();
       var json = world.Serialize();
       world.Clear();
@@ -145,7 +119,7 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void EntityReferences_WontBreak() {
+    public void KeepsEntityReferences() {
       CreateEntitiesWithReferencedComponents();
       int index = 0;
       foreach (var e in world.Entities) {
@@ -170,12 +144,12 @@ namespace ManulECS.Tests {
 
       foreach (var e in world.View<ComponentWithReference1>()) {
         ref var c = ref world.GetRef<ComponentWithReference1>(e);
-        Assert.True(world.Has<NormalComponent1>(c.entity));
+        Assert.True(world.Has<Component1>(c.entity));
       }
 
       foreach (var e in world.View<ComponentWithReference2>()) {
         ref var c = ref world.GetRef<ComponentWithReference2>(e);
-        Assert.True(world.Has<NormalComponent2>(c.entity));
+        Assert.True(world.Has<Component2>(c.entity));
       }
     }
   }

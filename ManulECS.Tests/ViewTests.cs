@@ -1,116 +1,84 @@
+using System.Linq;
 using Xunit;
 
 namespace ManulECS.Tests {
-  public class ViewTests {
-    private readonly World world;
-    struct Comp1 : IComponent { }
-    struct Comp2 : IComponent { }
-    struct Comp3 : IComponent { }
-
+  [Collection("World")]
+  public class ViewTests : TestContext {
     public ViewTests() {
-      world = new World();
-      world.Declare<Comp1>();
-      world.Declare<Comp2>();
-      world.Declare<Comp3>();
-
       for (int i = 0; i < 10; i++) {
-        var e = world.Create();
-        world.Assign(e, new Comp1 { });
-      }
-      for (int i = 0; i < 10; i++) {
-        var e = world.Create();
-        world.Assign(e, new Comp1 { });
-        world.Assign(e, new Comp2 { });
-      }
-      for (int i = 0; i < 10; i++) {
-        var e = world.Create();
-        world.Assign(e, new Comp1 { });
-        world.Assign(e, new Comp2 { });
-        world.Assign(e, new Comp3 { });
+        world.Handle().Assign(new Component1 { });
+        world.Handle().Assign(new Component1 { }).Assign(new Component2 { });
+        world.Handle().Assign(new Component1 { }).Assign(new Component2 { }).Assign(new Component3 { });
       }
     }
 
     [Fact]
-    public void NewlyCreatedView_IsNotDirty() {
-      var flags = new FlagEnum(world.GetFlag<Comp1>(), world.GetFlag<Comp2>());
-      var view = world.View<Comp1, Comp2>();
-      Assert.False(view.IsDirty(world, flags));
+    public void CountsEntities_WhenViewHasOneComponent() =>
+      Assert.Equal(30, world.View<Component1>().Count);
+
+    [Fact]
+    public void CountsEntities_WhenViewHasTwoComponents() =>
+      Assert.Equal(20, world.View<Component1, Component2>().Count);
+
+    [Fact]
+    public void CountsEntities_WhenViewHasThreeComponents() =>
+      Assert.Equal(10, world.View<Component1, Component2, Component3>().Count);
+
+    [Fact]
+    public void UpdatesView_WhenComponentAdded() {
+      var view = world.View<Component1, Component2>();
+      Assert.Equal(20, view.Count);
+
+      world.Handle().Assign(new Component1 { }).Assign(new Component2 { });
+      view = world.View<Component1, Component2>();
+      Assert.Equal(21, view.Count);
     }
 
     [Fact]
-    public void AddingComponent_DirtiesView() {
-      var flags = new FlagEnum(world.GetFlag<Comp1>(), world.GetFlag<Comp3>());
-      var view = world.View<Comp1, Comp3>();
-      var e = world.Create();
-      world.Assign(e, new Comp1 { });
+    public void UpdatesView_WhenComponentRemoved() {
+      var e1 = world.Handle().Assign(new Component1 { }).Assign(new Component2 { }).GetEntity();
+      var view = world.View<Component1, Component2>();
+      Assert.Equal(21, view.Count);
 
-      Assert.True(view.IsDirty(world, flags));
+      world.Remove(e1);
+      view = world.View<Component1, Component2>();
+      Assert.Equal(20, view.Count);
     }
 
     [Fact]
-    public void RemovingComponent_DirtiesView() {
-      var flags = new FlagEnum(world.GetFlag<Comp1>(), world.GetFlag<Comp2>());
-      var view = world.View<Comp1, Comp2>();
-      var e = world.entities[0];
-      world.Remove<Comp1>(e);
+    public void CachesView_WhenUsedFirstTime() {
+      var matcher = new Matcher(world.Flag<Component1>(), world.Flag<Component2>());
+      Assert.False(world.viewCache.Contains(matcher));
 
-      Assert.True(view.IsDirty(world, flags));
+      world.View<Component1, Component2>();
+      Assert.True(world.viewCache.Contains(matcher));
     }
 
     [Fact]
-    public void ClearingComponents_DirtiesView() {
-      var flags = new FlagEnum(world.GetFlag<Comp1>(), world.GetFlag<Comp2>());
-      var view = world.View<Comp1, Comp2>();
-      world.GetPool<Comp1>().Clear();
-
-      Assert.True(view.IsDirty(world, flags));
-    }
-
-    [Fact]
-    public void ChangesToComponents_RecreatesViewOnLoop() {
-      int count = 0;
-      foreach (var _ in world.View<Comp1, Comp2>()) {
-        count++;
+    public void PersistsChanges_WhenComponentChanged_OnIteration() {
+      foreach (var e in world.View<Component1>()) {
+        ref var c1 = ref world.GetRef<Component1>(e);
+        c1.value = 100u;
       }
-      Assert.Equal(20, count);
-
-      var e1 = world.Create();
-      world.Assign(e1, new Comp1 { });
-      world.Assign(e1, new Comp2 { });
-
-      count = 0;
-      foreach (var _ in world.View<Comp1, Comp2>()) {
-        count++;
-      }
-      Assert.Equal(21, count);
-
-      world.Remove<Comp1>(e1);
-
-      count = 0;
-      foreach (var _ in world.View<Comp1, Comp2>()) {
-        count++;
-      }
-      Assert.Equal(20, count);
-
-      var e2 = world.Create();
-      world.Assign(e2, new Comp1 { });
-      world.Assign(e2, new Comp2 { });
-
-      count = 0;
-      foreach (var _ in world.View<Comp1, Comp2>()) {
-        count++;
-      }
-      Assert.Equal(21, count);
+      Assert.True(world.View<Component1>().All(e => world.GetRef<Component1>(e).value == 100u));
     }
 
     [Fact]
-    public void ViewIsCached_WhenLoopedFirstTime() {
-      var matcher = new FlagEnum(world.GetFlag<Comp1>(), world.GetFlag<Comp2>());
+    public void RemovesEntity_WhenRemovingEntity_OnIteration() {
+      foreach (var e in world.View<Component1, Component2>()) {
+        world.Remove(e);
+      }
+      Assert.Equal(10, world.View<Component1>().Count);
+      Assert.Equal(0, world.View<Component2>().Count);
+    }
 
-      Assert.False(world.views.ContainsKey(matcher));
-
-      world.View<Comp1, Comp2>();
-      Assert.True(world.views.ContainsKey(matcher));
+    [Fact]
+    public void RemovesComponent_WhenRemovingComponent_OnIteration() {
+      foreach (var e in world.View<Component1, Component2>()) {
+        world.Remove<Component1>(e);
+      }
+      Assert.Equal(10, world.View<Component1>().Count);
+      Assert.Equal(20, world.View<Component2>().Count);
     }
   }
 }

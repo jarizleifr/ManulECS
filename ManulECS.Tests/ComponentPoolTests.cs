@@ -1,162 +1,137 @@
+using System.Collections.Generic;
 using Xunit;
 
 namespace ManulECS.Tests {
-  public struct SomeComp : IComponent { public uint value; }
-  public class DenseComponentPoolTests : ComponentPoolFacts<DenseComponentPool<SomeComp>> {
-    public override ComponentPool<SomeComp> GetPool(int initialSize) =>
-        new DenseComponentPool<SomeComp>(new Flag(0, 1u));
-  }
-  public class SparseComponentPoolTests : ComponentPoolFacts<SparseComponentPool<SomeComp>> {
-    public override ComponentPool<SomeComp> GetPool(int initialSize) =>
-        new SparseComponentPool<SomeComp>(new Flag(0, 1u));
+  public class DenseComponentPoolTests : ComponentPoolFacts<DensePool<Component1>> {
+    protected override Pool<Component1> GetPool() =>
+      new DensePool<Component1>() { Flag = new Flag(0, 1u) };
   }
 
-  ///<summary>Unit tests for low-level ComponentPool operations.</summary>
-  public abstract class ComponentPoolFacts<T> where T : ComponentPool<SomeComp> {
-    public abstract ComponentPool<SomeComp> GetPool(int initialSize = 128);
+  public class SparseComponentPoolTests : ComponentPoolFacts<SparsePool<Component1>> {
+    protected override Pool<Component1> GetPool() =>
+      new SparsePool<Component1>() { Flag = new Flag(0, 1u) };
+  }
 
-    private readonly ComponentPool<SomeComp> pool;
-    public ComponentPoolFacts() => pool = GetPool();
+  public abstract class ComponentPoolFacts<T> : ComponentPoolFacts where T : Pool<Component1> {
+    private static Component1 Value(uint value) => new() { value = value };
+    private readonly Pool<Component1> pool;
 
-    private static SomeComp Value(uint value) => new() { value = value };
+    protected abstract Pool<Component1> GetPool();
+
+    protected override List<Entity> CreateTestEntities(int count) {
+      var entities = new List<Entity>();
+      for (uint i = 0; i < count; i++) {
+        var entity = new Entity(i);
+        pool.Set(entity, Value(i));
+        entities.Add(entity);
+      }
+      return entities;
+    }
+
+    public ComponentPoolFacts() {
+      pool = GetPool();
+      untypedPool = pool;
+    }
 
     [Fact]
-    public void SettingNewValues_IncrementsCountProperly() {
-      pool.Set(new Entity(0), Value(100));
-      pool.Set(new Entity(1), Value(200));
-      pool.Set(new Entity(2), Value(300));
-
+    public void UpdatesCount_OnSet() {
+      CreateTestEntities(3);
       Assert.Equal(3, pool.Count);
     }
 
     [Fact]
-    public void UpdatingValue_ReturnsCorrectValue() {
-      pool.Set(new Entity(0), Value(100));
-      pool.Set(new Entity(1), Value(200));
-      pool.Set(new Entity(2), Value(123));
-
-      pool.Set(new Entity(2), Value(300));
-
-      Assert.Equal(300u, pool.GetRef(new Entity(2)).value);
+    public void UpdatesValue_OnSet() {
+      var entity = CreateTestEntities(3)[2];
+      pool.Set(entity, Value(300));
+      Assert.Equal(300u, pool.GetRef(entity).value);
     }
 
     [Fact]
-    public void Setting_IncrementsVersion() {
+    public void UpdatesVersion_OnSet() {
       var oldVersion = pool.Version;
-      pool.Set(new Entity(0), Value(123));
-
+      CreateTestEntities(1);
       Assert.Equal(oldVersion + 1, pool.Version);
     }
 
     [Fact]
-    public void Removing_IncrementsVersion() {
-      var oldVersion = pool.Version;
-      pool.Remove(new Entity(0));
-
-      Assert.Equal(oldVersion + 1, pool.Version);
+    public void GetsValue() {
+      var entities = CreateTestEntities(100);
+      Assert.Equal(1u, pool.GetRef(entities[1]).value);
+      Assert.Equal(5u, pool.GetRef(entities[5]).value);
+      Assert.Equal(80u, pool.GetRef(entities[80]).value);
     }
 
     [Fact]
-    public void GettingByIndex_ReturnsCorrectValue() {
-      pool.Set(new Entity(0), Value(100));
-      pool.Set(new Entity(64000), Value(200));
-      pool.Set(new Entity(123), Value(300));
+    public void GetsCorrectValue_AfterReplacingIntermediateWithLast() {
+      var entities = CreateTestEntities(3);
+      pool.Remove(entities[0]);
+      Assert.Equal(2u, pool.GetRef(entities[2]).value);
+    }
+  }
 
-      Assert.Equal(100u, pool.GetRef(new Entity(0)).value);
-      Assert.Equal(200u, pool.GetRef(new Entity(64000)).value);
-      Assert.Equal(300u, pool.GetRef(new Entity(123)).value);
+  public abstract class ComponentPoolFacts {
+    protected Pool untypedPool;
+    protected abstract List<Entity> CreateTestEntities(int count);
+
+    [Fact]
+    public void UpdatesVersion_OnRemove() {
+      var entity = CreateTestEntities(3)[1];
+      var oldVersion = untypedPool.Version;
+      untypedPool.Remove(entity);
+      Assert.Equal(oldVersion + 1, untypedPool.Version);
     }
 
     [Fact]
-    public void CanAddMoreValuesThanInitialSize() {
-      for (uint i = 0; i < 256; i++) {
-        pool.Set(new Entity(i), Value(i * 100));
-      }
-
-      Assert.Equal(256, pool.Count);
+    public void ResizesAutomatically() {
+      Assert.Equal(4, untypedPool.Capacity);
+      CreateTestEntities(5);
+      Assert.True(untypedPool.Capacity > 4);
     }
 
     [Fact]
-    public void GetRefForLastItem_ReturnsCorrectValue_AfterRemovingFirstValue() {
-      pool.Set(new Entity(0), Value(100));
-      pool.Set(new Entity(1), Value(200));
-      pool.Set(new Entity(2), Value(300));
-
-      pool.Remove(new Entity(0));
-
-      Assert.Equal(300u, pool.GetRef(new Entity(2)).value);
+    public void UpdatesCount_OnRemovingLastValue() {
+      var entities = CreateTestEntities(3);
+      untypedPool.Remove(entities[2]);
+      Assert.Equal(2, untypedPool.Count);
     }
 
     [Fact]
-    public void GetCorrectCount_AfterRemovingLastValue() {
-      pool.Set(new Entity(0), Value(100));
-      pool.Set(new Entity(1), Value(200));
-      pool.Set(new Entity(2), Value(300));
-
-      pool.Remove(new Entity(2));
-
-      Assert.Equal(2, pool.Count);
-    }
-
-    [Fact]
-    public void GetIndices_ReturnsCorrectValues() {
-      pool.Set(new Entity(3), Value(300));
-      pool.Set(new Entity(2), Value(200));
-      pool.Set(new Entity(1), Value(100));
-
-      var ids = pool.Indices.ToArray();
-      Assert.Contains(3u, ids);
-      Assert.Contains(2u, ids);
+    public void Gets_Indices() {
+      CreateTestEntities(3);
+      var ids = untypedPool.Indices.ToArray();
+      Assert.Contains(0u, ids);
       Assert.Contains(1u, ids);
+      Assert.Contains(2u, ids);
+      Assert.Equal(3, ids.Length);
     }
 
     [Fact]
-    public void GetIndices_HasCorrectLength() {
-      pool.Set(new Entity(1), Value(100));
-      pool.Set(new Entity(2), Value(200));
-      pool.Set(new Entity(3), Value(300));
-      pool.Set(new Entity(4), Value(300));
-      pool.Set(new Entity(5), Value(300));
-
-      var ids = pool.Indices.ToArray();
-      Assert.Equal(5, ids.Length);
-    }
-
-    [Fact]
-    public void GetIndices_OmitsRemovedIds() {
-      pool.Set(new Entity(1), Value(100));
-      pool.Set(new Entity(5), Value(300));
-      pool.Set(new Entity(3), Value(300));
-      pool.Set(new Entity(2), Value(200));
-      pool.Set(new Entity(4), Value(300));
-
-      pool.Remove(new Entity(1));
-      pool.Remove(new Entity(2));
-      pool.Remove(new Entity(3));
-
-      var ids = pool.Indices.ToArray();
+    public void Gets_OnlyAliveIndices() {
+      var entities = CreateTestEntities(5);
+      untypedPool.Remove(entities[0]);
+      untypedPool.Remove(entities[1]);
+      untypedPool.Remove(entities[3]);
+      var ids = untypedPool.Indices.ToArray();
       Assert.Equal(2, ids.Length);
+      Assert.Contains(2u, ids);
       Assert.Contains(4u, ids);
-      Assert.Contains(5u, ids);
     }
 
     [Fact]
-    public void Clear_SetsCount_ToZero() {
-      pool.Set(new Entity(1), Value(100));
-      pool.Set(new Entity(2), Value(200));
-      pool.Clear();
-      Assert.Equal(0, pool.Count);
+    public void ClearsCount_OnClear() {
+      CreateTestEntities(5);
+      untypedPool.Clear();
+      Assert.Equal(0, untypedPool.Count);
     }
 
     [Fact]
-    public void Reset_SetsToInitialState() {
-      pool.Set(new Entity(1), Value(100));
-      pool.Set(new Entity(2), Value(200));
-      pool.Reset();
-      var ids = pool.Indices.ToArray();
+    public void Resets() {
+      CreateTestEntities(5);
+      untypedPool.Reset();
+      var ids = untypedPool.Indices.ToArray();
       Assert.Empty(ids);
-      Assert.Equal(0, pool.Count);
-      Assert.Equal(0, pool.Version);
+      Assert.Equal(0, untypedPool.Count);
+      Assert.Equal(0, untypedPool.Version);
     }
   }
 }

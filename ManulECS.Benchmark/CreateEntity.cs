@@ -1,29 +1,15 @@
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Engines;
 
 namespace ManulECS.Benchmark {
   [MemoryDiagnoser]
-  public class CreateEntity {
-    public struct Comp1 : IComponent { }
-    public struct Comp2 : IComponent { }
-    public struct Tag1 : ITag { }
-    public struct Tag2 : ITag { }
-
-    [Params(10000, 100000)]
+  [SimpleJob(RunStrategy.Throughput, invocationCount: 1)]
+  public class CreateEntity : BaseBenchmark {
+    [Params(10000000)]
     public int N;
 
-    private World world;
-
-    [IterationSetup]
-    public void Setup() {
-      world = new World();
-      world.Declare<Comp1>();
-      world.Declare<Comp2>();
-      world.Declare<Tag1>();
-      world.Declare<Tag2>();
-    }
-
     [IterationCleanup]
-    public void Cleanup() => world = null;
+    public void Cleanup() => world.Clear();
 
     [Benchmark]
     public void CreateEntities() {
@@ -33,35 +19,44 @@ namespace ManulECS.Benchmark {
     }
 
     [Benchmark]
-    public void CreateEntitiesWith1Component() {
-      for (int i = 0; i < N; i++) {
-        var e = world.Create();
-        world.Assign(e, new Comp1 { });
-      }
-    }
+    public void CreateEntitiesWith1SparseComponent() => CreateWith1Component<SparsePos>();
     [Benchmark]
-    public void CreateEntitiesWith2Components() {
-      for (int i = 0; i < N; i++) {
-        var e = world.Create();
-        world.Assign(e, new Comp1 { });
-        world.Assign(e, new Comp2 { });
-      }
-    }
+    public void CreateEntitiesWith2SparseComponents() => CreateWith2Components<SparsePos, SparseMove>();
+    [Benchmark]
+    public void CreateEntitiesWith1DenseComponent() => CreateWith1Component<DensePos>();
+    [Benchmark]
+    public void CreateEntitiesWith2DenseComponents() => CreateWith2Components<DensePos, DenseMove>();
+    [Benchmark]
+    public void CreateEntitiesWith1SparseTag() => CreateWith1Tag<SparseTag1>();
+    [Benchmark]
+    public void CreateEntitiesWith2SparseTags() => CreateWith2Tags<SparseTag1, SparseTag2>();
+    [Benchmark]
+    public void CreateEntitiesWith1DenseTag() => CreateWith1Tag<DenseTag1>();
+    [Benchmark]
+    public void CreateEntitiesWith2DenseTags() => CreateWith2Tags<DenseTag1, DenseTag2>();
 
-    [Benchmark]
-    public void CreateEntitiesWith1Tag() {
+    private void CreateWith1Component<T>() where T : struct, IComponent {
       for (int i = 0; i < N; i++) {
-        var e = world.Create();
-        world.Assign<Tag1>(e);
+        world.Handle().Assign<T>(new());
       }
     }
-
-    [Benchmark]
-    public void CreateEntitiesWith2Tags() {
+    private void CreateWith2Components<T1, T2>()
+      where T1 : struct, IComponent
+      where T2 : struct, IComponent {
       for (int i = 0; i < N; i++) {
-        var e = world.Create();
-        world.Assign<Tag1>(e);
-        world.Assign<Tag2>(e);
+        world.Handle().Assign<T1>(new()).Assign<T2>(new());
+      }
+    }
+    private void CreateWith1Tag<T>() where T : struct, ITag {
+      for (int i = 0; i < N; i++) {
+        world.Handle().Tag<T>();
+      }
+    }
+    private void CreateWith2Tags<T1, T2>()
+      where T1 : struct, ITag
+      where T2 : struct, ITag {
+      for (int i = 0; i < N; i++) {
+        world.Handle().Tag<T1>().Tag<T2>();
       }
     }
   }

@@ -1,7 +1,7 @@
 using System;
 
 namespace ManulECS {
-  public struct EntityHandle {
+  public record struct EntityHandle {
     public World World { private get; init; }
     public Entity Entity { private get; init; }
 
@@ -13,8 +13,8 @@ namespace ManulECS {
       return ref component;
     }
 
-    public EntityHandle Assign<T>() where T : struct, ITag {
-      World.Assign<T>(Entity);
+    public EntityHandle Tag<T>() where T : struct, ITag {
+      World.Tag<T>(Entity);
       return this;
     }
 
@@ -23,8 +23,8 @@ namespace ManulECS {
       return this;
     }
 
-    public EntityHandle AssignOrReplace<T>(T component) where T : struct, IComponent {
-      World.AssignOrReplace(Entity, component);
+    public EntityHandle Patch<T>(T component) where T : struct, IComponent {
+      World.Patch(Entity, component);
       return this;
     }
 

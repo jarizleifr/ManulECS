@@ -1,20 +1,10 @@
 using Xunit;
 
 namespace ManulECS.Tests {
-  public struct Component1 : IComponent { public int value; }
-  public struct Component2 : IComponent { public int value; }
-
-  public class EntityTests {
-    private readonly World world;
-
-    public EntityTests() {
-      world = new World();
-      world.Declare<Component1>();
-      world.Declare<Component2>();
-    }
-
+  [Collection("World")]
+  public class EntityTests : TestContext {
     [Fact]
-    public void CreatingEntities_IncrementsCountCorrectly() {
+    public void UpdatesCount_OnCreate() {
       world.Create();
       world.Create();
       world.Create();
@@ -23,7 +13,7 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void CreatedEntities_HaveCorrectIds() {
+    public void CreatesEntityIdsSequentially() {
       var e1 = world.Create();
       var e2 = world.Create();
       var e3 = world.Create();
@@ -34,27 +24,37 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void CanAddMoreEntitiesThanInitialSize() {
+    public void ResizesAutomatically() {
       for (int i = 0; i < 256; i++) {
         world.Create();
       }
-
       Assert.Equal(256, world.EntityCount);
     }
 
     [Fact]
-    public void EntitiesProperty_OmitsRemovedEntity() {
+    public void Gets_Entities() {
+      var e1 = world.Create();
+      var e2 = world.Create();
+      var e3 = world.Create();
+
+      Assert.Contains(e1, world.Entities);
+      Assert.Contains(e2, world.Entities);
+      Assert.Contains(e3, world.Entities);
+    }
+
+    [Fact]
+    public void Gets_OnlyAliveEntities() {
       world.Create();
       var entity = world.Create();
       world.Create();
 
       world.Remove(entity);
 
-      Assert.DoesNotContain(world.Entities, e => e.Id == 1);
+      Assert.DoesNotContain(world.Entities, e => e.Id == entity.Id);
     }
 
     [Fact]
-    public void EntityId_GetsRecycled_WhenEntityRemoved() {
+    public void Recycles_Entities() {
       world.Create();
       var entity = world.Create();
       world.Create();
@@ -68,7 +68,7 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void MultipleEntityIds_GetRecycled_WhenEntitiesRemoved() {
+    public void Recycles_MultipleEntities() {
       world.Create();
       var e1 = world.Create();
       var e2 = world.Create();
@@ -84,7 +84,7 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void Version_GetsIncremented_WhenEntitiesRecycled() {
+    public void UpdatesVersion_OnRecycling() {
       world.Create();
       var e1 = world.Create();
       var e2 = world.Create();
@@ -104,7 +104,7 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void NewEntityId_IsIncremented_WhenOutOfRecyclableIds() {
+    public void UpdatesIdSequentially_WhenOutOfRecycledIds() {
       world.Create();
       var e1 = world.Create();
       var e2 = world.Create();
@@ -122,7 +122,7 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void Remove_ReturnsFalse_WhenRemovingAlreadyRemovedEntity() {
+    public void WontRemove_WhenAlreadyRemoved() {
       world.Create();
       var e1 = world.Create();
       var e2 = world.Create();
@@ -134,7 +134,7 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void ClonedEntity_HasSameComponents() {
+    public void ClonesEntity() {
       var origin = world.Create();
       world.Assign(origin, new Component1 { value = 42 });
       world.Assign(origin, new Component2 { value = 127 });
@@ -147,9 +147,9 @@ namespace ManulECS.Tests {
       var d2 = world.entityFlags[clone.Id];
 
       Assert.Equal(d1, d2);
-      Assert.Equal(2, world.GetPool<Component1>().Count);
-      Assert.Equal(2, world.GetPool<Component2>().Count);
-      Assert.Equal(42, c1.value);
+      Assert.Equal(2, world.Pool<Component1>().Count);
+      Assert.Equal(2, world.Pool<Component2>().Count);
+      Assert.Equal(42u, c1.value);
       Assert.Equal(127, c2.value);
     }
   }

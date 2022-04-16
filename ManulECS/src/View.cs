@@ -1,38 +1,32 @@
+using System.Collections;
 using System.Collections.Generic;
 
 namespace ManulECS {
-  public class View {
-    private readonly List<Entity> entities;
-    private readonly int[] versions = new int[8];
+  /// <summary>A view of entities.</summary>
+  public sealed class View : IEnumerable<Entity> {
+    internal const int MAX_VIEW_COMPONENTS = 8;
 
-    internal View(World world, FlagEnum matcher) {
-      entities = new List<Entity>();
-      Update(world, matcher);
-    }
+    private readonly List<Entity> entities = new();
+    private readonly int[] versions = new int[MAX_VIEW_COMPONENTS];
 
-    ///<summary>Checks if any of the assigned pools has changed.</summary>
-    internal bool IsDirty(World world, FlagEnum matcher) {
-      int v = 0;
+    internal View(World world, Matcher matcher) => Update(world, matcher);
+
+    internal int Count => entities.Count;
+
+    internal void Update(World world, Matcher matcher) {
+      var (v, dirty) = (0, false);
+      Pool smallest = null;
       foreach (var idx in matcher) {
-        var pool = world.indexedPools[idx];
-        if (versions[v++] != pool.Version) {
-          return true;
+        var pool = world.pools.flagged[idx];
+        if (versions[v] != pool.Version) {
+          dirty = true;
+          versions[v++] = pool.Version;
+        }
+        if (smallest == null || smallest.Count > pool.Count) {
+          smallest = pool;
         }
       }
-      return false;
-    }
-
-    internal void Update(World world, FlagEnum matcher) {
-      if (IsDirty(world, matcher)) {
-        int v = 0;
-        ComponentPool smallest = null;
-        foreach (var idx in matcher) {
-          var pool = world.indexedPools[idx];
-          if (smallest == null || smallest.Count > pool.Count) {
-            versions[v++] = pool.Version;
-            smallest = pool;
-          }
-        }
+      if (dirty) {
         entities.Clear();
         foreach (var id in smallest.Indices) {
           if (world.entityFlags[id].IsSubsetOf(matcher)) {
@@ -43,18 +37,11 @@ namespace ManulECS {
       }
     }
 
-    public struct ViewEnumerator {
-      private readonly List<Entity> entities;
-      private int index;
+    /// <summary>Returns an enumerator that iterates through entities.</summary>
+    public IEnumerator<Entity> GetEnumerator() =>
+      entities.GetEnumerator();
 
-      internal ViewEnumerator(List<Entity> entities) =>
-        (this.entities, index) = (entities, -1);
-
-      public Entity Current => entities[index];
-      public bool MoveNext() => ++index < entities.Count;
-      public void Reset() => index = -1;
-    }
-
-    public ViewEnumerator GetEnumerator() => new(entities);
+    IEnumerator IEnumerable.GetEnumerator() =>
+      GetEnumerator();
   }
 }

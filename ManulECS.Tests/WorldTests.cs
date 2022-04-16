@@ -1,156 +1,98 @@
 using System;
+using System.Linq;
 using Xunit;
 
 namespace ManulECS.Tests {
-  public class WorldTests {
-    private readonly World world;
-
-    struct Comp1 : IComponent { public bool value; }
-    struct Comp2 : IComponent { }
-    struct Comp3 : IComponent { }
-    struct CompOther : IComponent { public int v1; public int v2; }
-    struct TagComp : ITag { }
-
+  [Collection("World")]
+  public class WorldTests : TestContext {
     public WorldTests() {
-      this.world = new World();
-      world.Declare<Comp1>();
-      world.Declare<Comp2>();
-      world.Declare<Comp3>();
-      world.Declare<CompOther>();
-
       for (int i = 0; i < 10; i++) {
-        var e = world.Create();
-        world.Assign(e, new Comp1 { });
-      }
-      for (int i = 0; i < 10; i++) {
-        var e = world.Create();
-        world.Assign(e, new Comp1 { });
-        world.Assign(e, new Comp2 { });
-      }
-      for (int i = 0; i < 10; i++) {
-        var e = world.Create();
-        world.Assign(e, new Comp1 { });
-        world.Assign(e, new Comp3 { });
-      }
-      for (int i = 0; i < 10; i++) {
-        var e = world.Create();
-        world.Assign(e, new Comp2 { });
-        world.Assign(e, new Comp3 { });
-      }
-      for (int i = 0; i < 10; i++) {
-        var e = world.Create();
-        world.Assign(e, new Comp1 { });
-        world.Assign(e, new Comp2 { });
-        world.Assign(e, new Comp3 { });
+        world.Handle().Assign(new Component1 { });
+        world.Handle().Assign(new Component1 { }).Assign(new Component2 { });
       }
     }
 
     [Fact]
-    public void RegisteringTag_ResultsInTagPool() {
-      world.Declare<TagComp>();
-      var tagPool = world.GetTagPool<TagComp>();
-      Assert.IsType<TagPool<TagComp>>(tagPool);
+    public void Creates_MultipleWorlds() {
+      var otherWorld = new World();
+      otherWorld.Declare<Component1>().Declare<Component2>();
+
+      for (int i = 0; i < 10; i++) {
+        otherWorld.Handle().Assign(new Component1 { });
+        otherWorld.Handle().Assign(new Component1 { }).Assign(new Component2 { });
+      }
+      Assert.Equal(20, otherWorld.EntityCount);
+      Assert.Equal(20, otherWorld.Count<Component1>());
+      Assert.Equal(10, otherWorld.Count<Component2>());
     }
 
     [Fact]
-    public void ReregisteringComponent_ThrowsException() {
-      Assert.Throws<Exception>(() => world.Declare<Comp1>());
+    public void CreatesSparsePool_ByDefault() {
+      var pool = world.Pool<Component1>();
+      Assert.IsType<SparsePool<Component1>>(pool);
     }
 
     [Fact]
-    public void ClearingWorld_RemovesEntities() {
-      world.Create();
+    public void CreatesDensePool_OnDenseAttribute() {
+      var pool = world.Pool<Dense>();
+      Assert.IsType<DensePool<Dense>>(pool);
+    }
+
+    [Fact]
+    public void CreatesSparseTagPool_OnITagInterface() {
+      var pool = world.TagPool<Tag>();
+      Assert.IsType<SparseTagPool<Tag>>(pool);
+    }
+
+    [Fact]
+    public void CreatesDenseTagPool_OnITagInterface_And_DenseAttribute() {
+      var pool = world.TagPool<DenseTag>();
+      Assert.IsType<DenseTagPool<DenseTag>>(pool);
+    }
+
+    [Fact]
+    public void ThrowsException_OnDeclare_WhenAlreadyDeclaredComponent() {
+      Assert.Throws<Exception>(() => world.Declare<Component1>());
+    }
+
+    [Fact]
+    public void Clears() {
       world.Clear();
       Assert.Equal(0, world.EntityCount);
+      Assert.Equal(0, world.Count<Component1>());
+      Assert.Equal(0, world.Count<Component2>());
     }
 
     [Fact]
-    public void AssignOrReplace_OverwritesComponent() {
+    public void ClearsSpecificComponents() {
+      world.Clear<Component1>();
+      Assert.Equal(0, world.Pool<Component1>().Count);
+      Assert.NotEqual(0, world.Pool<Component2>().Count);
+    }
+
+    [Fact]
+    public void UpdatesEntityCount_WhenEntityRemoved() {
+      var entities = world.Entities.ToList();
+      world.Remove(entities[0]);
+      Assert.Equal(entities.Count - 1, world.EntityCount);
+    }
+
+    [Fact]
+    public void AssignsComponent() {
       var e = world.Create();
-      world.Assign(e, new CompOther { v1 = 100, v2 = 200 });
-      world.AssignOrReplace(e, new CompOther { v1 = 10, v2 = 20 });
-
-      var comp = world.GetRef<CompOther>(e);
-      Assert.Equal(10, comp.v1);
-      Assert.Equal(20, comp.v2);
+      world.Assign(e, new Component1 { value = 100u });
+      var comp = world.GetRef<Component1>(e);
+      Assert.Equal(100u, comp.value);
     }
 
     [Fact]
-    public void ComponentCountReturnsZero_AfterRemovingComponents() {
-      world.Clear<Comp1>();
-      Assert.Equal(0, world.GetPool<Comp1>().Count);
-    }
+    public void ReplacesComponent() {
+      var e = world.Create();
+      world.Assign(e, new Component1 { value = 100u });
+      world.Patch(e, new Component1 { value = 200u });
 
-    [Fact]
-    public void CountReturnsZero_AfterRemovingAllEntities() {
-      foreach (var e in world.Entities) {
-        world.Remove(e);
-      }
-      Assert.Equal(0, world.EntityCount);
-    }
-
-    [Fact]
-    public void SingleComponentView_CountsEntitiesCorrectly() {
-      int count = 0;
-      foreach (var _ in world.View<Comp1>()) {
-        count++;
-      }
-      Assert.Equal(40, count);
-    }
-
-    [Fact]
-    public void TwoComponentView_CountsEntitiesCorrectly() {
-      int count = 0;
-      foreach (var _ in world.View<Comp1, Comp2>()) {
-        count++;
-      }
-      Assert.Equal(20, count);
-    }
-
-    [Fact]
-    public void ThreeComponentView_CountsEntitiesCorrectly() {
-      int count = 0;
-      foreach (var _ in world.View<Comp1, Comp2, Comp3>()) {
-        count++;
-      }
-      Assert.Equal(10, count);
-    }
-
-    [Fact]
-    public void ModificationsToRefComponents_PersistAfterLooping() {
-      foreach (var e in world.View<Comp1>()) {
-        ref var c1 = ref world.GetRef<Comp1>(e);
-        c1.value = true;
-      }
-
-      foreach (var e in world.View<Comp1>()) {
-        ref var c1 = ref world.GetRef<Comp1>(e);
-        Assert.True(c1.value);
-      }
-    }
-
-    [Fact]
-    public void RemovingEntitiesWhileLooping_WorksAsExpected() {
-      int count = 0;
-      foreach (var e in world.View<Comp1, Comp2>()) {
-        world.Remove(e);
-      }
-      foreach (var _ in world.View<Comp1>()) {
-        count++;
-      }
-      Assert.Equal(20, count);
-    }
-
-    [Fact]
-    public void RemovingComponentsWhileLooping_WorksAsExpected() {
-      int count = 0;
-      foreach (var e in world.View<Comp1, Comp2>()) {
-        world.Remove<Comp2>(e);
-      }
-      foreach (var _ in world.View<Comp2>()) {
-        count++;
-      }
-      Assert.Equal(10, count);
+      var comp = world.GetRef<Component1>(e);
+      Assert.Equal(200u, comp.value);
     }
   }
 }

@@ -1,49 +1,38 @@
 using System;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Engines;
 
 namespace ManulECS.Benchmark {
-  public class DenseComponents {
-    [Dense]
-    public struct DensePos : IComponent { public int x, y; }
-    [Dense]
-    public struct DenseMove : IComponent { public int mx, my; }
-
-    private World world;
-
-    [Params(10000, 100000)]
+  [MemoryDiagnoser]
+  [SimpleJob(RunStrategy.Throughput, invocationCount: 1000)]
+  public class DenseComponents : BaseBenchmark {
+    [Params(100000)]
     public int N;
 
-    [GlobalSetup]
+    private readonly Random rng = new(0);
+
+    [IterationSetup]
     public void Setup() {
-      world = new World();
-      world.Declare<DensePos>();
-      world.Declare<DenseMove>();
-
-      var rng = new Random(0);
-
       for (int i = 0; i < N; i++) {
-        var e = world.Create();
-        world.Assign(e, new DensePos { x = rng.Next(0, 100), y = rng.Next(0, 100) });
-        world.Assign(e, new DenseMove { mx = rng.Next(-1, 2), my = rng.Next(-1, 2) });
+        world.Handle()
+          .Assign(new DensePos { x = rng.Next(0, 100), y = rng.Next(0, 100) })
+          .Assign(new DenseMove { mx = rng.Next(-1, 2), my = rng.Next(-1, 2) });
       }
-
-      foreach (var _ in world.View<DensePos, DenseMove>()) { }
+      world.View<DensePos>();
+      world.View<DensePos, DenseMove>();
     }
 
-    [GlobalCleanup]
-    public void Cleanup() {
-      world = null;
-    }
+    [IterationCleanup]
+    public void Cleanup() => world.Clear();
 
     [Benchmark]
     public void Update1Component() {
-      var positions = world.Pools<DensePos>();
-      foreach (var e in world.View<DensePos>()) {
+      var positions = world.Pool<DensePos>();
+      foreach (var e in world.View<DensePos, DenseMove>()) {
         ref var pos = ref positions[e];
         pos.x += 1;
       }
     }
-
     [Benchmark]
     public void Update2Components() {
       var (positions, moves) = world.Pools<DensePos, DenseMove>();
