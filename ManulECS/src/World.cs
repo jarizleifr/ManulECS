@@ -117,7 +117,7 @@ namespace ManulECS {
         ref var flags = ref entityFlags[entity.Id];
 
         if (!flags[flag]) {
-          flags[flag] = true;
+          flags.Set(flag);
           pool.Set(entity);
         }
       }
@@ -131,7 +131,7 @@ namespace ManulECS {
         ref var flags = ref entityFlags[entity.Id];
 
         if (!flags[flag]) {
-          flags[flag] = true;
+          flags.Set(flag);
           pool.Set(entity, component);
         }
       }
@@ -142,7 +142,7 @@ namespace ManulECS {
       if (IsAlive(entity)) {
         var pool = Pool<T>();
         ref var flags = ref entityFlags[entity.Id];
-        flags[pool.Flag] = true;
+        flags.Set(pool.Flag);
         pool.Set(entity, component);
       }
     }
@@ -152,7 +152,7 @@ namespace ManulECS {
       if (IsAlive(entity)) {
         var pool = UntypedPool<T>();
         ref var flags = ref entityFlags[entity.Id];
-        flags[pool.Flag] = false;
+        flags.Unset(pool.Flag);
         pool.Remove(entity);
       }
     }
@@ -175,7 +175,8 @@ namespace ManulECS {
       var pool = UntypedPool<T>();
       var flag = pool.Flag;
       foreach (var idx in pool.Indices) {
-        entityFlags[idx][flag] = false;
+        ref var flags = ref entityFlags[idx];
+        flags.Unset(flag);
       }
       pool.Clear();
     }

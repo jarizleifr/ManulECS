@@ -33,8 +33,7 @@ namespace ManulECS {
         entities.Clear();
         foreach (var id in smallest.Indices) {
           if (world.entityFlags[id].IsSubsetOf(matcher)) {
-            var entity = world.entities[id];
-            entities.Add(entity);
+            entities.Add(world.entities[id]);
           }
         }
       }

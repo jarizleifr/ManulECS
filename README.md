@@ -66,7 +66,7 @@ Declare method returns the World object, so declarations can be chained. See the
 world.Declare<Pos>().Declare<IsPlayer>();
 ```
 
-Easiest way to assign new components to entities is to use field initializers. Assign will only assign component if not already found on the entity, AssignOrReplace will replace the existing component.
+Easiest way to assign new components to entities is to use field initializers. Assign will only assign component if not already found on the entity, Patch will replace the existing component.
 
 ```
 world.Assign(entity, new Pos { x = 0, y = 0 }); // Will not overwrite
