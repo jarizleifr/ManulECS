@@ -1,19 +1,22 @@
-using System.Collections;
 using System.Collections.Generic;
 
 namespace ManulECS {
   /// <summary>A view of entities.</summary>
-  public sealed class View : IEnumerable<Entity> {
+  public sealed class View {
     internal const int MAX_VIEW_COMPONENTS = 8;
 
+    private readonly Matcher matcher;
     private readonly List<Entity> entities = new();
     private readonly int[] versions = new int[MAX_VIEW_COMPONENTS];
 
-    internal View(World world, Matcher matcher) => Update(world, matcher);
+    internal View(World world, Matcher matcher) {
+      this.matcher = matcher;
+      Update(world);
+    }
 
     internal int Count => entities.Count;
 
-    internal void Update(World world, Matcher matcher) {
+    internal void Update(World world) {
       var (v, dirty) = (0, false);
       Pool smallest = null;
       foreach (var idx in matcher) {
@@ -38,10 +41,7 @@ namespace ManulECS {
     }
 
     /// <summary>Returns an enumerator that iterates through entities.</summary>
-    public IEnumerator<Entity> GetEnumerator() =>
+    public List<Entity>.Enumerator GetEnumerator() =>
       entities.GetEnumerator();
-
-    IEnumerator IEnumerable.GetEnumerator() =>
-      GetEnumerator();
   }
 }

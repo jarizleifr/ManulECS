@@ -4,7 +4,7 @@ An Entity-Component-System and a simple shared resource manager for C#, inspired
 
 I wrote a library called ManulEC in 2019 for my roguelike game to provide simple runtime composition similar to Unity, but it had obvious flaws and performance issues, due to not being very cache-friendly. Thus, a need for ManulECS had arisen and I decided to write a new library from scratch, using structs and sparse sets.
 
-## Features
+# Features
 
 - Focus on simplicity
   - ManulECS provides only the core functionality of composition and iteration.
@@ -15,9 +15,9 @@ I wrote a library called ManulEC in 2019 for my roguelike game to provide simple
 - Declarative, control internals by providing attributes to components/resources
 - Serialization powered by Json.NET
 
-## Overview
+# Overview
 
-### World
+## World
 
 The ManulECS entity registry is called a 'World'. It is self-contained, and you can have multiple worlds with different sets of components.
 
@@ -25,7 +25,7 @@ The ManulECS entity registry is called a 'World'. It is self-contained, and you 
 var world = new World();  // Create a new entity registry.
 ```
 
-### Entity
+## Entity
 
 Entity objects
 
@@ -34,7 +34,7 @@ var entity = world.Create();  // Create a new entity
 world.Remove(entity);         // Remove the entity, clearing all components in the process.
 ```
 
-### Components and Tags
+## Components and Tags
 
 There are two kinds of things assignable to entities, Components and Tags. They are specified by using marker interfaces `IComponent` and `ITag`. These are only used for method constraints to give some useful static typing, so we're not unnecessarily boxing our structs.
 
@@ -88,7 +88,7 @@ world.Clear<Component>();         // Clear all components of type
 world.Clear<Tag>();               // Clear all tags of type
 ```
 
-### Entity handles
+## Entity handles
 
 You can also create an entity handle to easily add multiple components on an entity.
 
@@ -109,7 +109,7 @@ world.Handle(entity)
   .Remove<SomeTag>();
 ```
 
-### Resource
+## Resource
 
 Resources are classes that exist outside the sphere of entities. Resources are serialized just like entities, making them a good choice for complex data that needs to be persisted in a save game.
 
@@ -124,7 +124,7 @@ world.SetResource(level);
 var level = world.GetResource<Level>();
 ```
 
-### Systems
+## Systems
 
 ManulECS is not opinionated on how to build systems. Instead, ManulECS provides a View of Entities that you can iterate through with a foreach loop. Views are automatically updated on iteration if the related component pool has been modified.
 
@@ -150,7 +150,7 @@ foreach (var e in world.View<Position, Velocity, SomeInterestingTag>()) {
 }
 ```
 
-### Serialization
+## Serialization
 
 You can control what components should be serialized by attributes. This is opt-out, by default everything is included. This is handy for omitting non-gameplay entities from save games, like particle effects.
 
@@ -192,14 +192,14 @@ var json = world.Serialize("global");   // Serialize only resources and entities
 File.WriteAllText("global.json", json);
 ```
 
-## Benchmarks
+# Benchmarks
 
 I've included my testing benchmarks in ManulECS.Benchmark project, using the BenchmarkDotNet library.
 
 Benchmarks were run on Windows 10, .NET 6.0.4 with:
 Intel Core i5-8600K CPU 3.60GHz (Coffee Lake), 1 CPU, 6 logical and 6 physical cores
 
-### Creation and removal
+## Creation and removal
 
 It's hard to get good benchmarks as creation and removal is generally quite fast, and you'll need to pump N value into unreal amounts to get good data, but working with 10 million entities, we can make some observations:
 
@@ -230,29 +230,29 @@ It's hard to get good benchmarks as creation and removal is generally quite fast
 |         Remove1DenseTagFromEntities | 10000000 | 229.81 ms | 3.419 ms | 3.198 ms |
 |         Remove2DenseTagFromEntities | 10000000 | 470.47 ms | 6.776 ms | 6.338 ms |
 
-### Iterating views
+## Iterating views
 
-All tag iterations finished looping at around 450 μs. As tags have no values and cannot be operated on, there's practically no difference between iterating 1 or 2 tags.
+All tag iterations finished looping at around 74 μs. As tags have no values and cannot be operated on, there's practically no difference between iterating 1 or 2 tags.
 
 For components, the update functions are simple move operations with an x,y transform applied on x,y coordinates.
 
 Using a sparse pool:
 
-|            Method |      N |     Mean |   Error |  StdDev |   Median | Allocated |
-|------------------ |------- |---------:|--------:|--------:|---------:|----------:|
-|  Update1Component | 100000 | 564.1 μs | 4.36 μs | 4.08 μs | 562.4 μs |      40 B |
-| Update2Components | 100000 | 758.4 μs | 4.32 μs | 8.01 μs | 753.9 μs |      40 B |
+|            Method |      N |     Mean |   Error |  StdDev | Allocated |
+|------------------ |------- |---------:|--------:|--------:|----------:|
+|  Update1Component | 100000 | 255.9 μs | 2.90 μs | 2.71 μs |       1 B |
+| Update2Components | 100000 | 457.3 μs | 2.64 μs | 2.06 μs |       3 B |
 
 Using a dense pool:
 
 |            Method |      N |       Mean |    Error |   StdDev | Allocated |
 |------------------ |------- |-----------:|---------:|---------:|----------:|
-|  Update1Component | 100000 |   983.6 μs | 17.66 μs | 16.52 μs |      40 B |
-| Update2Components | 100000 | 1,721.1 μs |  2.22 μs |  2.07 μs |      41 B |
+|  Update1Component | 100000 |   821.2 μs | 13.35 μs | 12.49 μs |       3 B |
+| Update2Components | 100000 | 1,618.1 μs | 25.01 μs | 23.39 μs |       1 B |
 
-Again, sparse pools are faster, but one can optimize memory usage with dense pools.
+Again, sparse pools are a lot faster, but one can optimize memory usage with dense pools.
 
-## Extra - Code generation
+# Extra - Code generation
 
 I've included a Roslyn generator, which can auto-generate an extension method for you to declare all structs that have the `IComponent` or `ITag` marker interface. It's a bit of a brute force solution, but it makes things a bit more maintainable, when you're still developing your components and things change often.
 

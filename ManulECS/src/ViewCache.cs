@@ -8,7 +8,7 @@ namespace ManulECS {
 
     internal View GetView(World world, Matcher matcher) {
       if (views.TryGetValue(matcher, out View existingView)) {
-        existingView.Update(world, matcher);
+        existingView.Update(world);
         return existingView;
       } else {
         var view = new View(world, matcher);

@@ -3,7 +3,7 @@ using BenchmarkDotNet.Engines;
 
 namespace ManulECS.Benchmark {
   [MemoryDiagnoser]
-  [SimpleJob(RunStrategy.Throughput, invocationCount: 1000)]
+  [SimpleJob(RunStrategy.Throughput, invocationCount: 10000)]
   public class DenseTags : BaseBenchmark {
     [Params(100000)]
     public int N;

@@ -60,7 +60,9 @@ namespace ManulECS.Tests {
         ref var c1 = ref world.GetRef<Component1>(e);
         c1.value = 100u;
       }
-      Assert.True(world.View<Component1>().All(e => world.GetRef<Component1>(e).value == 100u));
+      foreach (var e in world.View<Component1>()) {
+        Assert.Equal(100u, world.GetRef<Component1>(e).value);
+      }
     }
 
     [Fact]
