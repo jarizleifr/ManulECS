@@ -65,44 +65,44 @@ namespace ManulECS {
 
     /// <summary>Get a view of entities with one component</summary>
     /// <returns>View of entities possessing component of type T1</returns>
-    public View View<T1>() where T1 : struct, Ba => viewCache.GetView(this, new Matcher(Flag<T1>()));
+    public View View<T1>() where T1 : struct, Ba => viewCache.GetView(this, Matcher<T1>());
 
     /// <summary>Get a view of entities with two components</summary>
     /// <returns>View of entities possessing components of types T1,T2</returns>
     public View View<T1, T2>() where T1 : struct, Ba where T2 : struct, Ba =>
-        viewCache.GetView(this, new Matcher(Flag<T1>(), Flag<T2>()));
+        viewCache.GetView(this, Matcher<T1>() + Matcher<T2>());
 
     /// <summary>Get a view of entities with three components</summary>
     /// <returns>View of entities possessing components of types T1,T2,T3</returns>
     public View View<T1, T2, T3>() where T1 : struct, Ba where T2 : struct, Ba where T3 : struct, Ba =>
-        viewCache.GetView(this, new Matcher(Flag<T1>(), Flag<T2>(), Flag<T3>()));
+        viewCache.GetView(this, Matcher<T1>() + Matcher<T2>() + Matcher<T3>());
 
     /// <summary>Get a view of entities with four components</summary>
     /// <returns>View of entities possessing components of types T1,T2,T3,T4</returns>
     public View View<T1, T2, T3, T4>()
       where T1 : struct, Ba where T2 : struct, Ba where T3 : struct, Ba where T4 : struct, Ba =>
-        viewCache.GetView(this, new Matcher(Flag<T1>(), Flag<T2>(), Flag<T3>(), Flag<T4>()));
+        viewCache.GetView(this, Matcher<T1>() + Matcher<T2>() + Matcher<T3>() + Matcher<T4>());
 
     /// <summary>Get a view of entities with five components</summary>
     /// <returns>View of entities possessing components of types T1,T2,T3,T4,T5</returns>
     public View View<T1, T2, T3, T4, T5>()
       where T1 : struct, Ba where T2 : struct, Ba where T3 : struct, Ba where T4 : struct, Ba where T5 : struct, Ba =>
-        viewCache.GetView(this, new Matcher(Flag<T1>(), Flag<T2>(), Flag<T3>(), Flag<T4>(), Flag<T5>()));
+        viewCache.GetView(this, Matcher<T1>() + Matcher<T2>() + Matcher<T3>() + Matcher<T4>() + Matcher<T5>());
 
     /// <summary>Get a view of entities with six components</summary>
     /// <returns>View of entities possessing components of types T1,T2,T3,T4,T5,T6</returns>
     public View View<T1, T2, T3, T4, T5, T6>()
       where T1 : struct, Ba where T2 : struct, Ba where T3 : struct, Ba where T4 : struct, Ba
       where T5 : struct, Ba where T6 : struct, Ba =>
-        viewCache.GetView(this, new Matcher(Flag<T1>(), Flag<T2>(), Flag<T3>(), Flag<T4>(), Flag<T5>(), Flag<T6>()));
+        viewCache.GetView(this, Matcher<T1>() + Matcher<T2>() + Matcher<T3>() + Matcher<T4>() + Matcher<T5>() + Matcher<T6>());
 
     /// <summary>Get a view of entities with seven components</summary>
     /// <returns>View of entities possessing components of types T1,T2,T3,T4,T5,T6,T7</returns>
     public View View<T1, T2, T3, T4, T5, T6, T7>()
       where T1 : struct, Ba where T2 : struct, Ba where T3 : struct, Ba where T4 : struct, Ba
       where T5 : struct, Ba where T6 : struct, Ba where T7 : struct, Ba =>
-        viewCache.GetView(this, new Matcher(
-          Flag<T1>(), Flag<T2>(), Flag<T3>(), Flag<T4>(), Flag<T5>(), Flag<T6>(), Flag<T7>())
+        viewCache.GetView(this,
+          Matcher<T1>() + Matcher<T2>() + Matcher<T3>() + Matcher<T4>() + Matcher<T5>() + Matcher<T6>() + Matcher<T7>()
         );
 
     /// <summary>Get a view of entities with eight components</summary>
@@ -110,8 +110,8 @@ namespace ManulECS {
     public View View<T1, T2, T3, T4, T5, T6, T7, T8>()
       where T1 : struct, Ba where T2 : struct, Ba where T3 : struct, Ba where T4 : struct, Ba
       where T5 : struct, Ba where T6 : struct, Ba where T7 : struct, Ba where T8 : struct, Ba =>
-        viewCache.GetView(this, new Matcher(
-          Flag<T1>(), Flag<T2>(), Flag<T3>(), Flag<T4>(), Flag<T5>(), Flag<T6>(), Flag<T7>(), Flag<T8>())
+        viewCache.GetView(this,
+          Matcher<T1>() + Matcher<T2>() + Matcher<T3>() + Matcher<T4>() + Matcher<T5>() + Matcher<T6>() + Matcher<T7>() + Matcher<T8>()
         );
   }
 }

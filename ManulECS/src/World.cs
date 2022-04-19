@@ -113,11 +113,11 @@ namespace ManulECS {
     public void Tag<T>(in Entity entity) where T : struct, ITag {
       if (IsAlive(entity)) {
         var pool = TagPool<T>();
-        var flag = pool.Flag;
+        var matcher = pool.Matcher;
         ref var flags = ref entityFlags[entity.Id];
 
-        if (!flags[flag]) {
-          flags.Set(flag);
+        if (!flags[matcher]) {
+          flags += matcher;
           pool.Set(entity);
         }
       }
@@ -127,11 +127,11 @@ namespace ManulECS {
     public void Assign<T>(in Entity entity, T component) where T : struct, IComponent {
       if (IsAlive(entity)) {
         var pool = Pool<T>();
-        var flag = pool.Flag;
+        var matcher = pool.Matcher;
         ref var flags = ref entityFlags[entity.Id];
 
-        if (!flags[flag]) {
-          flags.Set(flag);
+        if (!flags[matcher]) {
+          flags += matcher;
           pool.Set(entity, component);
         }
       }
@@ -142,7 +142,7 @@ namespace ManulECS {
       if (IsAlive(entity)) {
         var pool = Pool<T>();
         ref var flags = ref entityFlags[entity.Id];
-        flags.Set(pool.Flag);
+        flags += pool.Matcher;
         pool.Set(entity, component);
       }
     }
@@ -152,7 +152,7 @@ namespace ManulECS {
       if (IsAlive(entity)) {
         var pool = UntypedPool<T>();
         ref var flags = ref entityFlags[entity.Id];
-        flags.Unset(pool.Flag);
+        flags -= pool.Matcher;
         pool.Remove(entity);
       }
     }
@@ -173,10 +173,10 @@ namespace ManulECS {
     /// <summary>Remove all components or tags of type T from all entities.</summary>
     public void Clear<T>() where T : struct, IBaseComponent {
       var pool = UntypedPool<T>();
-      var flag = pool.Flag;
+      var matcher = pool.Matcher;
       foreach (var idx in pool.Indices) {
         ref var flags = ref entityFlags[idx];
-        flags.Unset(flag);
+        flags -= matcher;
       }
       pool.Clear();
     }
@@ -208,8 +208,8 @@ namespace ManulECS {
       : Enumerable.Empty<Entity>();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal Flag Flag<T>() where T : struct, IBaseComponent =>
-      pools.typed[TypeIndex.Get<T>()].Flag;
+    internal Matcher Matcher<T>() where T : struct, IBaseComponent =>
+      pools.typed[TypeIndex.Get<T>()].Matcher;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Pool UntypedPool<T>() where T : struct, IBaseComponent =>

@@ -47,7 +47,7 @@ namespace ManulECS.Tests {
 
     [Fact]
     public void CachesView_WhenUsedFirstTime() {
-      var matcher = new Matcher(world.Flag<Component1>(), world.Flag<Component2>());
+      var matcher = world.Matcher<Component1>() + world.Matcher<Component2>();
       Assert.False(world.viewCache.Contains(matcher));
 
       world.View<Component1, Component2>();

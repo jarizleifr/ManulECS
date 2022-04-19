@@ -7,12 +7,12 @@ namespace ManulECS {
     internal Pool[] typed = new Pool[4];
     internal Pool[] flagged = new Pool[4];
 
-    private Flag nextFlag = new(0, 1u);
-    internal Flag GetNextFlag() {
+    private (int index, uint bits) nextFlag = (0, 1u);
+    internal (int index, uint bits) GetNextFlag() {
       var flag = nextFlag;
       nextFlag = nextFlag.bits != 0x8000_0000
-        ? new Flag(nextFlag.index, nextFlag.bits << 1)
-        : new Flag(nextFlag.index + 1, 1u);
+        ? (nextFlag.index, nextFlag.bits << 1)
+        : (nextFlag.index + 1, 1u);
       return flag;
     }
 
@@ -34,11 +34,12 @@ namespace ManulECS {
         throw new Exception($"{Matcher.MAX_SIZE * 32} component maximum exceeded!");
       }
 
+      var matcher = new Matcher(flag.index, flag.bits);
       Pool pool = type switch {
-        var t when IsTag(t) && IsDense(t) => new DenseTagPool<T> { Flag = flag },
-        var t when IsTag(t) && !IsDense(t) => new SparseTagPool<T> { Flag = flag },
-        var t when !IsTag(t) && IsDense(t) => new DensePool<T> { Flag = flag },
-        var t when !IsTag(t) && !IsDense(t) => new SparsePool<T> { Flag = flag },
+        var t when IsTag(t) && IsDense(t) => new DenseTagPool<T> { Matcher = matcher },
+        var t when IsTag(t) && !IsDense(t) => new SparseTagPool<T> { Matcher = matcher },
+        var t when !IsTag(t) && IsDense(t) => new DensePool<T> { Matcher = matcher },
+        var t when !IsTag(t) && !IsDense(t) => new SparsePool<T> { Matcher = matcher },
         _ => throw new Exception($"Unsupported component pool type in component {type}!")
       };
 
