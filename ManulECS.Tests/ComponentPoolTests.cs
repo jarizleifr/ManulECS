@@ -4,12 +4,12 @@ using Xunit;
 namespace ManulECS.Tests {
   public class DenseComponentPoolTests : ComponentPoolFacts<DensePool<Component1>> {
     protected override Pool<Component1> GetPool() =>
-      new DensePool<Component1>() { Matcher = new Matcher(0, 1u) };
+      new DensePool<Component1>() { Key = new Key(0, 1u) };
   }
 
   public class SparseComponentPoolTests : ComponentPoolFacts<SparsePool<Component1>> {
     protected override Pool<Component1> GetPool() =>
-      new SparsePool<Component1>() { Matcher = new Matcher(0, 1u) };
+      new SparsePool<Component1>() { Key = new Key(0, 1u) };
   }
 
   public abstract class ComponentPoolFacts<T> : ComponentPoolFacts where T : Pool<Component1> {

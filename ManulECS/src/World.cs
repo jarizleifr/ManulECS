@@ -9,7 +9,7 @@ namespace ManulECS {
     private uint nextEntityId = 0;
 
     internal Entity[] entities = new Entity[4];
-    internal Matcher[] entityFlags = new Matcher[4];
+    internal Key[] entityFlags = new Key[4];
 
     internal readonly Pools pools = new();
     internal readonly Dictionary<Type, object> resources = new();
@@ -65,7 +65,7 @@ namespace ManulECS {
     /// <summary>Clears all entities, components and resources from the world.</summary>
     public void Clear() {
       entities = new Entity[4];
-      entityFlags = new Matcher[4];
+      entityFlags = new Key[4];
       destroyed = Entity.NULL_ID;
       nextEntityId = 0;
 
@@ -113,11 +113,11 @@ namespace ManulECS {
     public void Tag<T>(in Entity entity) where T : struct, ITag {
       if (IsAlive(entity)) {
         var pool = TagPool<T>();
-        var matcher = pool.Matcher;
+        var key = pool.Key;
         ref var flags = ref entityFlags[entity.Id];
 
-        if (!flags[matcher]) {
-          flags += matcher;
+        if (!flags[key]) {
+          flags += key;
           pool.Set(entity);
         }
       }
@@ -127,11 +127,11 @@ namespace ManulECS {
     public void Assign<T>(in Entity entity, T component) where T : struct, IComponent {
       if (IsAlive(entity)) {
         var pool = Pool<T>();
-        var matcher = pool.Matcher;
+        var key = pool.Key;
         ref var flags = ref entityFlags[entity.Id];
 
-        if (!flags[matcher]) {
-          flags += matcher;
+        if (!flags[key]) {
+          flags += key;
           pool.Set(entity, component);
         }
       }
@@ -142,7 +142,7 @@ namespace ManulECS {
       if (IsAlive(entity)) {
         var pool = Pool<T>();
         ref var flags = ref entityFlags[entity.Id];
-        flags += pool.Matcher;
+        flags += pool.Key;
         pool.Set(entity, component);
       }
     }
@@ -152,7 +152,7 @@ namespace ManulECS {
       if (IsAlive(entity)) {
         var pool = UntypedPool<T>();
         ref var flags = ref entityFlags[entity.Id];
-        flags -= pool.Matcher;
+        flags -= pool.Key;
         pool.Remove(entity);
       }
     }
@@ -173,10 +173,10 @@ namespace ManulECS {
     /// <summary>Remove all components or tags of type T from all entities.</summary>
     public void Clear<T>() where T : struct, IBaseComponent {
       var pool = UntypedPool<T>();
-      var matcher = pool.Matcher;
+      var key = pool.Key;
       foreach (var idx in pool.Indices) {
         ref var flags = ref entityFlags[idx];
-        flags -= matcher;
+        flags -= key;
       }
       pool.Clear();
     }
@@ -208,8 +208,8 @@ namespace ManulECS {
       : Enumerable.Empty<Entity>();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal Matcher Matcher<T>() where T : struct, IBaseComponent =>
-      pools.typed[TypeIndex.Get<T>()].Matcher;
+    internal Key Key<T>() where T : struct, IBaseComponent =>
+      pools.typed[TypeIndex.Get<T>()].Key;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Pool UntypedPool<T>() where T : struct, IBaseComponent =>

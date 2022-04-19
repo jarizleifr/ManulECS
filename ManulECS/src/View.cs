@@ -5,12 +5,12 @@ namespace ManulECS {
   public sealed class View {
     internal const int MAX_VIEW_COMPONENTS = 8;
 
-    private readonly Matcher matcher;
+    private readonly Key key;
     private readonly List<Entity> entities = new();
     private readonly int[] versions = new int[MAX_VIEW_COMPONENTS];
 
-    internal View(World world, Matcher matcher) {
-      this.matcher = matcher;
+    internal View(World world, Key key) {
+      this.key = key;
       Update(world);
     }
 
@@ -19,7 +19,7 @@ namespace ManulECS {
     internal void Update(World world) {
       var (v, dirty) = (0, false);
       Pool smallest = null;
-      foreach (var idx in matcher) {
+      foreach (var idx in key) {
         var pool = world.pools.flagged[idx];
         if (versions[v] != pool.Version) {
           dirty = true;
@@ -32,7 +32,7 @@ namespace ManulECS {
       if (dirty) {
         entities.Clear();
         foreach (var id in smallest.Indices) {
-          if (world.entityFlags[id].IsSubsetOf(matcher)) {
+          if (world.entityFlags[id].IsSubsetOf(key)) {
             entities.Add(world.entities[id]);
           }
         }

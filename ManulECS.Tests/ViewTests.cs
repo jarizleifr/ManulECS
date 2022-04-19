@@ -47,11 +47,11 @@ namespace ManulECS.Tests {
 
     [Fact]
     public void CachesView_WhenUsedFirstTime() {
-      var matcher = world.Matcher<Component1>() + world.Matcher<Component2>();
-      Assert.False(world.viewCache.Contains(matcher));
+      var key = world.Key<Component1>() + world.Key<Component2>();
+      Assert.False(world.viewCache.Contains(key));
 
       world.View<Component1, Component2>();
-      Assert.True(world.viewCache.Contains(matcher));
+      Assert.True(world.viewCache.Contains(key));
     }
 
     [Fact]

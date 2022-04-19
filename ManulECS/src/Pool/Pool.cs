@@ -13,7 +13,7 @@ namespace ManulECS {
     internal int Count { get; set; } = 0;
     internal int Capacity => ids.Length;
     internal int Version { get; set; } = 0;
-    internal Matcher Matcher { get; init; }
+    internal Key Key { get; init; }
 
     internal Span<uint> Indices => ids.AsSpan(0, Count);
 

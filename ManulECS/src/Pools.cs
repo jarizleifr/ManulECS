@@ -30,16 +30,16 @@ namespace ManulECS {
         TypeIndex.Create<T>()
       );
 
-      if (flagIndex == Matcher.MAX_SIZE * 32) {
-        throw new Exception($"{Matcher.MAX_SIZE * 32} component maximum exceeded!");
+      if (flagIndex == Key.MAX_SIZE * 32) {
+        throw new Exception($"{Key.MAX_SIZE * 32} component maximum exceeded!");
       }
 
-      var matcher = new Matcher(flag.index, flag.bits);
+      var key = new Key(flag.index, flag.bits);
       Pool pool = type switch {
-        var t when IsTag(t) && IsDense(t) => new DenseTagPool<T> { Matcher = matcher },
-        var t when IsTag(t) && !IsDense(t) => new SparseTagPool<T> { Matcher = matcher },
-        var t when !IsTag(t) && IsDense(t) => new DensePool<T> { Matcher = matcher },
-        var t when !IsTag(t) && !IsDense(t) => new SparsePool<T> { Matcher = matcher },
+        var t when IsTag(t) && IsDense(t) => new DenseTagPool<T> { Key = key },
+        var t when IsTag(t) && !IsDense(t) => new SparseTagPool<T> { Key = key },
+        var t when !IsTag(t) && IsDense(t) => new DensePool<T> { Key = key },
+        var t when !IsTag(t) && !IsDense(t) => new SparsePool<T> { Key = key },
         _ => throw new Exception($"Unsupported component pool type in component {type}!")
       };
 

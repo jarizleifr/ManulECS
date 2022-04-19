@@ -1,40 +1,40 @@
 using System;
 
 namespace ManulECS {
-  internal unsafe struct Matcher : IEquatable<Matcher> {
+  internal unsafe struct Key : IEquatable<Key> {
     internal const int MAX_SIZE = 4;
     private fixed uint u[MAX_SIZE];
 
-    internal Matcher(int index, uint bits) => u[index] = bits;
+    internal Key(int index, uint bits) => u[index] = bits;
 
-    internal bool this[Matcher flag] => IsSubsetOf(flag);
+    internal bool this[Key flag] => IsSubsetOf(flag);
 
-    internal bool IsSubsetOf(Matcher filter) {
+    internal bool IsSubsetOf(Key filter) {
       for (int i = 0; i < MAX_SIZE; i++) {
         if ((u[i] & filter.u[i]) != filter.u[i]) return false;
       }
       return true;
     }
 
-    public static bool operator ==(Matcher left, Matcher right) => left.Equals(right);
-    public static bool operator !=(Matcher left, Matcher right) => !(left == right);
+    public static bool operator ==(Key left, Key right) => left.Equals(right);
+    public static bool operator !=(Key left, Key right) => !(left == right);
 
-    public static Matcher operator +(Matcher left, Matcher right) {
-      Matcher matcher;
+    public static Key operator +(Key left, Key right) {
+      Key key;
       for (int i = 0; i < MAX_SIZE; i++) {
-        matcher.u[i] = left.u[i] | right.u[i];
+        key.u[i] = left.u[i] | right.u[i];
       }
-      return matcher;
+      return key;
     }
-    public static Matcher operator -(Matcher left, Matcher right) {
-      Matcher matcher;
+    public static Key operator -(Key left, Key right) {
+      Key key;
       for (int i = 0; i < MAX_SIZE; i++) {
-        matcher.u[i] = left.u[i] & ~right.u[i];
+        key.u[i] = left.u[i] & ~right.u[i];
       }
-      return matcher;
+      return key;
     }
 
-    public bool Equals(Matcher other) {
+    public bool Equals(Key other) {
       for (int i = 0; i < MAX_SIZE; i++) {
         if (u[i] != other.u[i]) return false;
       }
@@ -49,13 +49,13 @@ namespace ManulECS {
       return hash.ToHashCode();
     }
 
-    public override bool Equals(object obj) => obj is Matcher flags && Equals(flags);
+    public override bool Equals(object obj) => obj is Key flags && Equals(flags);
 
     public struct FlagEnumerator {
-      private readonly Matcher flags;
+      private readonly Key flags;
       private int i, j;
 
-      internal FlagEnumerator(Matcher flags) =>
+      internal FlagEnumerator(Key flags) =>
         (this.flags, i, j) = (flags, 0, -1);
 
       public int Current => i * 32 + j;

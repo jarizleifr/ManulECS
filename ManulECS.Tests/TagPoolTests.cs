@@ -3,11 +3,11 @@ using Xunit;
 
 namespace ManulECS.Tests {
   public class DenseTagPoolTests : TagPoolFacts<DenseTagPool<Tag>> {
-    protected override TagPool<Tag> GetPool() => new DenseTagPool<Tag>() { Matcher = new Matcher(0, 1u) };
+    protected override TagPool<Tag> GetPool() => new DenseTagPool<Tag>() { Key = new Key(0, 1u) };
   }
 
   public class SparseTagPoolTests : TagPoolFacts<SparseTagPool<Tag>> {
-    protected override TagPool<Tag> GetPool() => new SparseTagPool<Tag>() { Matcher = new Matcher(0, 1u) };
+    protected override TagPool<Tag> GetPool() => new SparseTagPool<Tag>() { Key = new Key(0, 1u) };
   }
 
   public abstract class TagPoolFacts<T> : ComponentPoolFacts where T : TagPool<Tag> {
