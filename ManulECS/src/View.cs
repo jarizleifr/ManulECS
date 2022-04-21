@@ -5,12 +5,11 @@ namespace ManulECS {
   /// <summary>A view of entities.</summary>
   public sealed class View : IDisposable {
     private readonly Key key;
-    private readonly List<Pool> subscribed;
-
+    private readonly List<Pool> subscribed = new();
     private readonly List<Entity> entities = new();
 
     private bool shouldUpdate = true;
-    private void SetToUpdate() => shouldUpdate = true;
+    internal void SetToUpdate() => shouldUpdate = true;
 
     internal int Count => entities.Count;
 
@@ -41,9 +40,9 @@ namespace ManulECS {
           }
         }
         entities.Clear();
-        foreach (var id in smallest.Indices) {
-          if (world.entityFlags[id].IsSubsetOf(key)) {
-            entities.Add(world.entities[id]);
+        foreach (var entity in smallest.Entities) {
+          if (world.entityFlags[entity.Id].IsSubsetOf(key)) {
+            entities.Add(entity);
           }
         }
         shouldUpdate = false;

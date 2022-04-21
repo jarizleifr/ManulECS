@@ -43,5 +43,17 @@ namespace ManulECS.Benchmark {
         pos.y += mov.my;
       }
     }
+    [Benchmark]
+    public void Update2ComponentsDirty() {
+      var (positions, moves) = world.Pools<SparsePos, SparseMove>();
+      var view = world.View<SparsePos, SparseMove>();
+      view.SetToUpdate();
+      foreach (var e in view) {
+        ref var pos = ref positions[e];
+        ref var mov = ref moves[e];
+        pos.x += mov.mx;
+        pos.y += mov.my;
+      }
+    }
   }
 }

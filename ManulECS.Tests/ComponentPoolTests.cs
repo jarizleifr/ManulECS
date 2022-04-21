@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Xunit;
 
 namespace ManulECS.Tests {
@@ -100,11 +101,11 @@ namespace ManulECS.Tests {
     [Fact]
     public void Gets_Indices() {
       CreateTestEntities(3);
-      var ids = untypedPool.Indices.ToArray();
+      var ids = untypedPool.Entities.ToArray().Select(entity => entity.Id);
       Assert.Contains(0u, ids);
       Assert.Contains(1u, ids);
       Assert.Contains(2u, ids);
-      Assert.Equal(3, ids.Length);
+      Assert.Equal(3, ids.Count());
     }
 
     [Fact]
@@ -113,8 +114,8 @@ namespace ManulECS.Tests {
       untypedPool.Remove(entities[0]);
       untypedPool.Remove(entities[1]);
       untypedPool.Remove(entities[3]);
-      var ids = untypedPool.Indices.ToArray();
-      Assert.Equal(2, ids.Length);
+      var ids = untypedPool.Entities.ToArray().Select(entity => entity.Id);
+      Assert.Equal(2, ids.Count());
       Assert.Contains(2u, ids);
       Assert.Contains(4u, ids);
     }
@@ -148,7 +149,7 @@ namespace ManulECS.Tests {
     public void Resets() {
       CreateTestEntities(5);
       untypedPool.Reset();
-      var ids = untypedPool.Indices.ToArray();
+      var ids = untypedPool.Entities.ToArray();
       Assert.Empty(ids);
       Assert.Equal(0, untypedPool.Count);
     }

@@ -8,13 +8,13 @@ namespace ManulECS {
   public sealed class DenseAttribute : Attribute { }
 
   public abstract class Pool {
-    protected uint[] ids;
+    protected Entity[] entities;
 
     internal int Count { get; set; }
-    internal int Capacity => ids.Length;
+    internal int Capacity => entities.Length;
     internal Key Key { get; init; }
 
-    internal Span<uint> Indices => ids.AsSpan(0, Count);
+    internal Span<Entity> Entities => entities.AsSpan(0, Count);
 
     internal Action OnUpdate { get; set; }
 

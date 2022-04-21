@@ -52,16 +52,16 @@ namespace ManulECS.Benchmark {
 
   public class Program {
     public static void Main() {
-      /*BenchmarkSwitcher.FromTypes(new[] {
+      BenchmarkSwitcher.FromTypes(new[] {
         //typeof(CreateEntity),
         //typeof(RemoveEntity),
-        //typeof(SparseComponents),
+        typeof(SparseComponents),
         //typeof(DenseComponents),
         //typeof(SparseTags),
         //typeof(DenseTags),
-      }).RunAll();*/
+      }).RunAll();
 
-      var test = new SparseComponents();
+      /*var test = new SparseComponents();
       test.N = 1000;
       test.GlobalSetup();
       test.Setup();
@@ -69,7 +69,7 @@ namespace ManulECS.Benchmark {
         test.Update2Components();
       }
       test.Cleanup();
-      test.GlobalCleanup();
+      test.GlobalCleanup();*/
     }
   }
 }
