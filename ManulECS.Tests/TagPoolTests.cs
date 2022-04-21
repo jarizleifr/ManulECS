@@ -43,10 +43,11 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void UpdatesVersion_OnSet() {
-      var oldVersion = pool.Version;
+    public void InvokesOnUpdate_OnSet() {
+      bool called = false;
+      pool.OnUpdate += () => called = true;
       CreateTestEntities(1);
-      Assert.Equal(oldVersion + 1, pool.Version);
+      Assert.True(called);
     }
   }
 }

@@ -21,7 +21,6 @@ namespace ManulECS {
       mapping[entity.Id] != Entity.NULL_ID;
 
     internal override void Set(in Entity entity, T item) {
-      Version++;
       var id = entity.Id;
       ArrayUtil.EnsureSize(id, ref mapping, Entity.NULL_ID);
       ref var key = ref mapping[id];
@@ -31,22 +30,22 @@ namespace ManulECS {
       } else {
         UpdateEntry(key, id, item);
       }
+      OnUpdate?.Invoke();
     }
 
     internal override void Remove(in Entity entity) {
-      Version++;
       var id = entity.Id;
       if (id < mapping.Length) {
         ref var key = ref mapping[id];
         if (key != Entity.NULL_ID) {
           if (key == Count - 1) {
-            key = Entity.NULL_ID;
             Count--;
           } else {
             ReplaceEntryWithLast(key);
             mapping[ids[Count]] = key;
-            key = Entity.NULL_ID;
           }
+          key = Entity.NULL_ID;
+          OnUpdate?.Invoke();
         }
       }
     }
@@ -59,15 +58,18 @@ namespace ManulECS {
       Set(target, this[origin]);
 
     internal override void Clear() {
-      Version++;
-      Count = 0;
       Array.Fill(mapping, Entity.NULL_ID);
+      Count = 0;
+      OnUpdate?.Invoke();
     }
 
     internal override void Reset() {
       mapping = new uint[4];
       Array.Fill(mapping, Entity.NULL_ID);
-      base.Reset();
+      Count = 0;
+      ids = new uint[4];
+      components = new T[4];
+      OnUpdate?.Invoke();
     }
   }
 
@@ -87,7 +89,7 @@ namespace ManulECS {
     internal override bool Has(in Entity entity) => mapping.ContainsKey(entity.Id);
 
     internal override void Set(in Entity entity, T item) {
-      Version++;
+      OnUpdate?.Invoke();
       var id = entity.Id;
       if (mapping.TryGetValue(id, out var key)) {
         UpdateEntry(key, id, item);
@@ -98,17 +100,16 @@ namespace ManulECS {
     }
 
     internal override void Remove(in Entity entity) {
-      Version++;
+      OnUpdate?.Invoke();
       var id = entity.Id;
       if (mapping.TryGetValue(id, out var key)) {
         if (key == Count - 1) {
-          mapping.Remove(id);
           Count--;
         } else {
           ReplaceEntryWithLast(key);
           mapping[ids[Count]] = key;
-          mapping.Remove(id);
         }
+        mapping.Remove(id);
       }
     }
 
@@ -120,14 +121,17 @@ namespace ManulECS {
       Set(target, this[origin]);
 
     internal override void Clear() {
-      Version++;
-      Count = 0;
       mapping.Clear();
+      Count = 0;
+      OnUpdate?.Invoke();
     }
 
     internal override void Reset() {
       mapping.Clear();
-      base.Reset();
+      Count = 0;
+      ids = new uint[4];
+      components = new T[4];
+      OnUpdate?.Invoke();
     }
   }
 
@@ -143,13 +147,6 @@ namespace ManulECS {
 
     internal override void Set(in Entity entity) => Set(entity, default);
     internal abstract void Set(in Entity entity, T component);
-
-    internal override void Reset() {
-      ids = new uint[4];
-      components = new T[4];
-      Version = 0;
-      Count = 0;
-    }
 
     protected void AddEntry(uint id, T component) {
       ArrayUtil.SetWithResize((uint)Count, ref ids, id, ref components, component);

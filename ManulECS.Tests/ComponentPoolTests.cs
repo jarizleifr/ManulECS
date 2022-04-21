@@ -43,29 +43,30 @@ namespace ManulECS.Tests {
     public void UpdatesValue_OnSet() {
       var entity = CreateTestEntities(3)[2];
       pool.Set(entity, Value(300));
-      Assert.Equal(300u, pool.GetRef(entity).value);
+      Assert.Equal(300u, pool[entity].value);
     }
 
     [Fact]
-    public void UpdatesVersion_OnSet() {
-      var oldVersion = pool.Version;
+    public void InvokesOnUpdate_OnSet() {
+      bool called = false;
+      pool.OnUpdate += () => called = true;
       CreateTestEntities(1);
-      Assert.Equal(oldVersion + 1, pool.Version);
+      Assert.True(called);
     }
 
     [Fact]
     public void GetsValue() {
       var entities = CreateTestEntities(100);
-      Assert.Equal(1u, pool.GetRef(entities[1]).value);
-      Assert.Equal(5u, pool.GetRef(entities[5]).value);
-      Assert.Equal(80u, pool.GetRef(entities[80]).value);
+      Assert.Equal(1u, pool[entities[1]].value);
+      Assert.Equal(5u, pool[entities[5]].value);
+      Assert.Equal(80u, pool[entities[80]].value);
     }
 
     [Fact]
     public void GetsCorrectValue_AfterReplacingIntermediateWithLast() {
       var entities = CreateTestEntities(3);
       pool.Remove(entities[0]);
-      Assert.Equal(2u, pool.GetRef(entities[2]).value);
+      Assert.Equal(2u, pool[entities[2]].value);
     }
   }
 
@@ -74,11 +75,12 @@ namespace ManulECS.Tests {
     protected abstract List<Entity> CreateTestEntities(int count);
 
     [Fact]
-    public void UpdatesVersion_OnRemove() {
+    public void InvokesOnUpdate_OnRemove() {
       var entity = CreateTestEntities(3)[1];
-      var oldVersion = untypedPool.Version;
+      bool called = false;
+      untypedPool.OnUpdate += () => called = true;
       untypedPool.Remove(entity);
-      Assert.Equal(oldVersion + 1, untypedPool.Version);
+      Assert.True(called);
     }
 
     [Fact]
@@ -125,13 +127,30 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
+    public void InvokesOnUpdate_OnClear() {
+      CreateTestEntities(5);
+      bool called = false;
+      untypedPool.OnUpdate += () => called = true;
+      untypedPool.Clear();
+      Assert.True(called);
+    }
+
+    [Fact]
+    public void InvokesOnUpdate_OnReset() {
+      CreateTestEntities(5);
+      bool called = false;
+      untypedPool.OnUpdate += () => called = true;
+      untypedPool.Reset();
+      Assert.True(called);
+    }
+
+    [Fact]
     public void Resets() {
       CreateTestEntities(5);
       untypedPool.Reset();
       var ids = untypedPool.Indices.ToArray();
       Assert.Empty(ids);
       Assert.Equal(0, untypedPool.Count);
-      Assert.Equal(0, untypedPool.Version);
     }
   }
 }

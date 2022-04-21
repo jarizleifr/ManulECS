@@ -1,41 +1,52 @@
+using System;
 using System.Collections.Generic;
 
 namespace ManulECS {
   /// <summary>A view of entities.</summary>
-  public sealed class View {
-    internal const int MAX_VIEW_COMPONENTS = 8;
-
+  public sealed class View : IDisposable {
     private readonly Key key;
-    private readonly List<Entity> entities = new();
-    private readonly int[] versions = new int[MAX_VIEW_COMPONENTS];
+    private readonly List<Pool> subscribed;
 
-    internal View(World world, Key key) {
-      this.key = key;
-      Update(world);
-    }
+    private readonly List<Entity> entities = new();
+
+    private bool shouldUpdate = true;
+    private void SetToUpdate() => shouldUpdate = true;
 
     internal int Count => entities.Count;
 
-    internal void Update(World world) {
-      var (v, dirty) = (0, false);
-      Pool smallest = null;
+    internal View(World world, Key key) {
+      this.key = key;
+
       foreach (var idx in key) {
-        var pool = world.pools.flagged[idx];
-        if (versions[v] != pool.Version) {
-          dirty = true;
-          versions[v++] = pool.Version;
-        }
-        if (smallest == null || smallest.Count > pool.Count) {
-          smallest = pool;
-        }
+        var pool = world.pools.typed[idx];
+        pool.OnUpdate += SetToUpdate;
       }
-      if (dirty) {
+      Update(world);
+    }
+
+    public void Dispose() {
+      foreach (var pool in subscribed) {
+        pool.OnUpdate -= SetToUpdate;
+      }
+      GC.SuppressFinalize(this);
+    }
+
+    internal void Update(World world) {
+      if (shouldUpdate) {
+        Pool smallest = null;
+        foreach (var idx in key) {
+          var pool = world.pools.typed[idx];
+          if (smallest == null || smallest.Count > pool.Count) {
+            smallest = pool;
+          }
+        }
         entities.Clear();
         foreach (var id in smallest.Indices) {
           if (world.entityFlags[id].IsSubsetOf(key)) {
             entities.Add(world.entities[id]);
           }
         }
+        shouldUpdate = false;
       }
     }
 
