@@ -42,11 +42,13 @@ namespace ManulECS {
     }
 
     public override int GetHashCode() {
-      var hash = new HashCode();
-      for (int i = 0; i < MAX_SIZE; i++) {
-        hash.Add(u[i]);
+      unchecked {
+        int hash = 17;
+        for (int i = 0; i < MAX_SIZE; i++) {
+          hash = hash * 31 + u[i].GetHashCode();
+        }
+        return hash;
       }
-      return hash.ToHashCode();
     }
 
     public override bool Equals(object obj) => obj is Key flags && Equals(flags);

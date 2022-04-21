@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace ManulECS {
   /// <summary>
@@ -10,9 +11,10 @@ namespace ManulECS {
     private uint[] mapping;
 
     /// <summary>Get a ref of component. This WILL throw exception if not found.</summary>
-    public override ref T GetRef(in Entity entity) => ref components[mapping[entity.Id]];
-    /// <summary>Get a ref of component. This WILL throw exception if not found.</summary>
-    public override ref T this[in Entity entity] => ref components[mapping[entity.Id]];
+    public override ref T this[in Entity entity] {
+      [MethodImpl(MethodImplOptions.AggressiveInlining)]
+      get => ref components[mapping[entity.Id]];
+    }
 
     internal override bool Has(in Entity entity) =>
       entity.Id < mapping.Length &&
@@ -54,7 +56,7 @@ namespace ManulECS {
       : null;
 
     internal override void Clone(in Entity origin, in Entity target) =>
-      Set(target, GetRef(origin));
+      Set(target, this[origin]);
 
     internal override void Clear() {
       Version++;
@@ -76,11 +78,11 @@ namespace ManulECS {
   public sealed class DensePool<T> : Pool<T> where T : struct {
     private readonly Dictionary<uint, uint> mapping = new();
 
-    /// <summary>
-    /// Get reference of value. This WILL throw exception if not found.
-    /// </summary>
-    public override ref T GetRef(in Entity entity) => ref components[mapping[entity.Id]];
-    public override ref T this[in Entity entity] => ref components[mapping[entity.Id]];
+    /// <summary>Get a ref of component. This WILL throw exception if not found.</summary>
+    public override ref T this[in Entity entity] {
+      [MethodImpl(MethodImplOptions.AggressiveInlining)]
+      get => ref components[mapping[entity.Id]];
+    }
 
     internal override bool Has(in Entity entity) => mapping.ContainsKey(entity.Id);
 
@@ -115,7 +117,7 @@ namespace ManulECS {
       : null;
 
     internal override void Clone(in Entity origin, in Entity target) =>
-      Set(target, GetRef(origin));
+      Set(target, this[origin]);
 
     internal override void Clear() {
       Version++;
@@ -134,8 +136,10 @@ namespace ManulECS {
 
     internal Span<T> Components => components.AsSpan(0, Count);
 
-    public abstract ref T GetRef(in Entity entity);
-    public abstract ref T this[in Entity entity] { get; }
+    public abstract ref T this[in Entity entity] {
+      [MethodImpl(MethodImplOptions.AggressiveInlining)]
+      get;
+    }
 
     internal override void Set(in Entity entity) => Set(entity, default);
     internal abstract void Set(in Entity entity, T component);
@@ -161,15 +165,6 @@ namespace ManulECS {
       Count--;
       ids[index] = ids[Count];
       components[index] = components[Count];
-    }
-
-    protected void Swap(uint index, uint index2) {
-      (uint tempItem, T tempItem2) = (ids[index], components[index]);
-      ids[index] = ids[index2];
-      components[index] = components[index2];
-
-      ids[index2] = tempItem;
-      components[index2] = tempItem2;
     }
   }
 }

@@ -4,7 +4,7 @@ using BenchmarkDotNet.Engines;
 
 namespace ManulECS.Benchmark {
   [MemoryDiagnoser]
-  [SimpleJob(RunStrategy.Throughput, invocationCount: 1000)]
+  [SimpleJob(RunStrategy.Throughput, invocationCount: 100)]
   public class SparseComponents : BaseBenchmark {
     [Params(100000)]
     public int N;
@@ -25,7 +25,7 @@ namespace ManulECS.Benchmark {
     [IterationCleanup]
     public void Cleanup() => world.Clear();
 
-    [Benchmark]
+    //[Benchmark]
     public void Update1Component() {
       var positions = world.Pool<SparsePos>();
       foreach (var e in world.View<SparsePos, SparseMove>()) {

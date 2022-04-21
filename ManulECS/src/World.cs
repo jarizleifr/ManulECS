@@ -95,7 +95,7 @@ namespace ManulECS {
     /// <summary>Gets a component reference of type T from an entity.</summary>
     /// <exception cref="System.IndexOutOfRangeException">Thrown when entity has no such component</exception>
     public ref T GetRef<T>(in Entity entity) where T : struct, IComponent =>
-      ref Pool<T>().GetRef(entity);
+      ref Pool<T>()[entity];
 
     /// <summary>Gets a component of type T from an entity, if it exists.</summary>
     /// <returns>true if component found, false otherwise</returns>
