@@ -6,12 +6,12 @@ namespace ManulECS {
   public sealed class View : IDisposable {
     private readonly Key key;
     private readonly List<Pool> subscribed = new();
-    private readonly List<Entity> entities = new();
 
     private bool shouldUpdate = true;
     internal void SetToUpdate() => shouldUpdate = true;
 
-    internal int Count => entities.Count;
+    private Entity[] entities = new Entity[4];
+    internal int Count { get; private set; }
 
     internal View(World world, Key key) {
       this.key = key;
@@ -39,18 +39,32 @@ namespace ManulECS {
             smallest = pool;
           }
         }
-        entities.Clear();
+        Count = 0;
+        ArrayUtil.EnsureSize((uint)smallest.Entities.Length, ref entities, Entity.NULL_ENTITY);
         foreach (var entity in smallest.Entities) {
           if (world.entityFlags[entity.Id].IsSubsetOf(key)) {
-            entities.Add(entity);
+            entities[Count++] = entity;
           }
         }
         shouldUpdate = false;
       }
     }
 
+    public ref struct ViewEnumerator {
+      private readonly Span<Entity> entities;
+      private int index;
+
+      public ViewEnumerator(Entity[] entities, int length) {
+        this.entities = entities.AsSpan(0, length);
+        index = -1;
+      }
+
+      public Entity Current => entities[index];
+
+      public bool MoveNext() => ++index < entities.Length;
+    }
+
     /// <summary>Returns an enumerator that iterates through entities.</summary>
-    public List<Entity>.Enumerator GetEnumerator() =>
-      entities.GetEnumerator();
+    public ViewEnumerator GetEnumerator() => new(entities, Count);
   }
 }
