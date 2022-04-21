@@ -9,9 +9,8 @@ namespace ManulECS {
     private uint nextEntityId = 0;
 
     internal Entity[] entities = new Entity[4];
-    internal Key[] entityFlags = new Key[4];
+    internal Key[] entityKeys = new Key[4];
 
-    internal readonly Pools pools = new();
     internal readonly Dictionary<Type, object> resources = new();
     internal readonly ViewCache viewCache = new();
 
@@ -20,13 +19,13 @@ namespace ManulECS {
       Entity entity;
       if (destroyed == Entity.NULL_ID) {
         entity = new Entity(nextEntityId, 0);
-        ArrayUtil.SetWithResize(nextEntityId, ref entities, entity, ref entityFlags, default);
+        ArrayUtil.SetWithResize(nextEntityId, ref entities, entity, ref entityKeys, default);
         nextEntityId++;
       } else {
         var oldEntity = entities[destroyed];
         entity = new Entity(destroyed, oldEntity.Version);
         entities[destroyed] = entity;
-        entityFlags[destroyed] = default;
+        entityKeys[destroyed] = default;
         destroyed = oldEntity.Id;
       }
       return entity;
@@ -50,12 +49,12 @@ namespace ManulECS {
     /// <returns>true if entity successfully removed, false if entity did not exist.</returns>
     public bool Remove(in Entity entity) {
       if (IsAlive(entity)) {
-        ref var data = ref entityFlags[entity.Id];
-        foreach (var index in entityFlags[entity.Id]) {
-          pools.flagged[index].Remove(entity);
+        ref var key = ref entityKeys[entity.Id];
+        foreach (var idx in key) {
+          PoolByKeyIndex(idx).Remove(entity);
         }
         entities[entity.Id] = new Entity(destroyed, (byte)(entity.Version + 1));
-        data = default;
+        key = default;
         destroyed = entity.Id;
         return true;
       }
@@ -65,11 +64,11 @@ namespace ManulECS {
     /// <summary>Clears all entities, components and resources from the world.</summary>
     public void Clear() {
       entities = new Entity[4];
-      entityFlags = new Key[4];
+      entityKeys = new Key[4];
       destroyed = Entity.NULL_ID;
       nextEntityId = 0;
 
-      pools.Clear();
+      Array.ForEach(indexedPools, pool => pool?.Reset());
       resources.Clear();
       viewCache.Clear();
     }
@@ -80,7 +79,7 @@ namespace ManulECS {
     /// <summary>Declare a component/tag of type T for use.</summary>
     /// <returns>The calling World object, for chaining.</returns>
     public World Declare<T>() where T : struct, IBaseComponent {
-      pools.Register<T>();
+      Register<T>();
       return this;
     }
 
@@ -114,7 +113,7 @@ namespace ManulECS {
       if (IsAlive(entity)) {
         var pool = TagPool<T>();
         var key = pool.Key;
-        ref var flags = ref entityFlags[entity.Id];
+        ref var flags = ref entityKeys[entity.Id];
 
         if (!flags[key]) {
           flags += key;
@@ -128,7 +127,7 @@ namespace ManulECS {
       if (IsAlive(entity)) {
         var pool = Pool<T>();
         var key = pool.Key;
-        ref var flags = ref entityFlags[entity.Id];
+        ref var flags = ref entityKeys[entity.Id];
 
         if (!flags[key]) {
           flags += key;
@@ -141,7 +140,7 @@ namespace ManulECS {
     public void Patch<T>(in Entity entity, T component) where T : struct, IComponent {
       if (IsAlive(entity)) {
         var pool = Pool<T>();
-        ref var flags = ref entityFlags[entity.Id];
+        ref var flags = ref entityKeys[entity.Id];
         flags += pool.Key;
         pool.Set(entity, component);
       }
@@ -151,7 +150,7 @@ namespace ManulECS {
     public void Remove<T>(in Entity entity) where T : struct, IBaseComponent {
       if (IsAlive(entity)) {
         var pool = UntypedPool<T>();
-        ref var flags = ref entityFlags[entity.Id];
+        ref var flags = ref entityKeys[entity.Id];
         flags -= pool.Key;
         pool.Remove(entity);
       }
@@ -160,11 +159,11 @@ namespace ManulECS {
     /// <summary>Creates a new copy of an entity, with all the same components and tags.</summary>
     public Entity Clone(in Entity entity) {
       var clone = Create();
-      ref var cloneFlags = ref entityFlags[clone.Id];
-      cloneFlags = entityFlags[entity.Id];
+      ref var cloneFlags = ref entityKeys[clone.Id];
+      cloneFlags = entityKeys[entity.Id];
 
       foreach (var idx in cloneFlags) {
-        var pool = pools.flagged[idx];
+        var pool = PoolByKeyIndex(idx);
         pool.Clone(entity, clone);
       }
       return clone;
@@ -175,7 +174,7 @@ namespace ManulECS {
       var pool = UntypedPool<T>();
       var key = pool.Key;
       foreach (var entity in pool) {
-        ref var flags = ref entityFlags[entity.Id];
+        ref var flags = ref entityKeys[entity.Id];
         flags -= key;
       }
       pool.Clear();
@@ -209,14 +208,14 @@ namespace ManulECS {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Key Key<T>() where T : struct, IBaseComponent =>
-      pools.typed[TypeIndex.Get<T>()].Key;
+      indexedPools[TypeIndex.Get<T>()].Key;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Pool UntypedPool<T>() where T : struct, IBaseComponent =>
-      pools.typed[TypeIndex.Get<T>()];
+      indexedPools[TypeIndex.Get<T>()];
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Pool TagPool<T>() where T : struct, ITag =>
-      pools.typed[TypeIndex.Get<T>()];
+      indexedPools[TypeIndex.Get<T>()];
   }
 }

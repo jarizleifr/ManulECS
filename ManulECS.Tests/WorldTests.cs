@@ -27,27 +27,15 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void CreatesSparsePool_ByDefault() {
-      var pool = world.Pool<Component1>();
-      Assert.IsType<SparsePool<Component1>>(pool);
-    }
-
-    [Fact]
-    public void CreatesDensePool_OnDenseAttribute() {
-      var pool = world.Pool<Dense>();
-      Assert.IsType<DensePool<Dense>>(pool);
-    }
-
-    [Fact]
-    public void CreatesSparseTagPool_OnITagInterface() {
+    public void CreatesTagPool() {
       var pool = world.TagPool<Tag>();
-      Assert.IsType<SparseTagPool<Tag>>(pool);
+      Assert.IsType<TagPool<Tag>>(pool);
     }
 
     [Fact]
-    public void CreatesDenseTagPool_OnITagInterface_And_DenseAttribute() {
-      var pool = world.TagPool<DenseTag>();
-      Assert.IsType<DenseTagPool<DenseTag>>(pool);
+    public void CreatesComponentPool() {
+      var pool = world.Pool<Component1>();
+      Assert.IsType<Pool<Component1>>(pool);
     }
 
     [Fact]

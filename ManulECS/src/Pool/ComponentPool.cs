@@ -1,17 +1,13 @@
 using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace ManulECS {
-  /// <summary>
-  /// Sparse set backed with an array. Use for common components. 
-  /// Uses more memory, but is faster.
-  /// </summary>
-  public sealed class SparsePool<T> : Pool<T> where T : struct {
+  public sealed class Pool<T> : Pool where T : struct {
+    private T[] components;
     private uint[] mapping;
 
     /// <summary>Get a ref of component. This WILL throw exception if not found.</summary>
-    public override ref T this[in Entity entity] {
+    public ref T this[in Entity entity] {
       [MethodImpl(MethodImplOptions.AggressiveInlining)]
       get => ref components[mapping[entity.Id]];
     }
@@ -20,7 +16,9 @@ namespace ManulECS {
       entity.Id < mapping.Length &&
       mapping[entity.Id] != Entity.NULL_ID;
 
-    internal override void Set(in Entity entity, T component) {
+    internal override void Set(in Entity entity) => Set(entity, default);
+
+    internal void Set(in Entity entity, T component) {
       var id = entity.Id;
       ArrayUtil.EnsureSize(id, ref mapping, Entity.NULL_ID);
       ref var key = ref mapping[id];
@@ -29,8 +27,7 @@ namespace ManulECS {
         ArrayUtil.SetWithResize((uint)Count, ref entities, entity, ref components, component);
         Count++;
       } else {
-        entities[key] = entity;
-        components[key] = component;
+        (entities[key], components[key]) = (entity, component);
       }
       OnUpdate?.Invoke();
     }
@@ -40,12 +37,8 @@ namespace ManulECS {
       if (id < mapping.Length) {
         ref var key = ref mapping[id];
         if (key != Entity.NULL_ID) {
-          if (key == Count - 1) {
-            Count--;
-          } else {
-            Count--;
-            entities[key] = entities[Count];
-            components[key] = components[Count];
+          if (key < --Count) {
+            (entities[key], components[key]) = (entities[Count], components[Count]);
             mapping[entities[Count].Id] = key;
           }
           key = Entity.NULL_ID;
@@ -75,83 +68,5 @@ namespace ManulECS {
       components = new T[4];
       OnUpdate?.Invoke();
     }
-  }
-
-  /// <summary>
-  /// Sparse set backed with a dictionary mapping. Use for rare components.
-  /// Slower access speed, but is more memory efficient.
-  /// </summary>
-  public sealed class DensePool<T> : Pool<T> where T : struct {
-    private readonly Dictionary<uint, uint> mapping = new();
-
-    /// <summary>Get a ref of component. This WILL throw exception if not found.</summary>
-    public override ref T this[in Entity entity] {
-      [MethodImpl(MethodImplOptions.AggressiveInlining)]
-      get => ref components[mapping[entity.Id]];
-    }
-
-    internal override bool Has(in Entity entity) => mapping.ContainsKey(entity.Id);
-
-    internal override void Set(in Entity entity, T component) {
-      var id = entity.Id;
-      if (!mapping.TryGetValue(id, out var key)) {
-        mapping.Add(id, (uint)Count);
-        ArrayUtil.SetWithResize((uint)Count, ref entities, entity, ref components, component);
-        Count++;
-      } else {
-        entities[key] = entity;
-        components[key] = component;
-      }
-      OnUpdate?.Invoke();
-    }
-
-    internal override void Remove(in Entity entity) {
-      var id = entity.Id;
-      if (mapping.TryGetValue(id, out var key)) {
-        if (key == Count - 1) {
-          Count--;
-        } else {
-          Count--;
-          entities[key] = entities[Count];
-          components[key] = components[Count];
-          mapping[entities[Count].Id] = key;
-        }
-        mapping.Remove(id);
-        OnUpdate?.Invoke();
-      }
-    }
-
-    internal override object Get(in Entity entity) => Has(entity)
-      ? components[mapping[entity.Id]]
-      : null;
-
-    internal override void Clone(in Entity origin, in Entity target) =>
-      Set(target, this[origin]);
-
-    internal override void Clear() {
-      mapping.Clear();
-      Count = 0;
-      OnUpdate?.Invoke();
-    }
-
-    internal override void Reset() {
-      mapping.Clear();
-      Count = 0;
-      entities = new Entity[4];
-      components = new T[4];
-      OnUpdate?.Invoke();
-    }
-  }
-
-  public abstract class Pool<T> : Pool where T : struct {
-    protected T[] components;
-
-    public abstract ref T this[in Entity entity] {
-      [MethodImpl(MethodImplOptions.AggressiveInlining)]
-      get;
-    }
-
-    internal override void Set(in Entity entity) => Set(entity, default);
-    internal abstract void Set(in Entity entity, T component);
   }
 }

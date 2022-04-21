@@ -12,31 +12,21 @@ namespace ManulECS.Benchmark {
     public void Setup() {
       for (int i = 0; i < N; i++) {
         world.Handle()
-          .Assign(new SparsePos { }).Assign(new SparseMove { })
-          .Assign(new DensePos { }).Assign(new DenseMove { })
-          .Tag<SparseTag1>().Tag<SparseTag2>()
-          .Tag<DenseTag1>().Tag<DenseTag2>();
+          .Assign(new Pos { }).Assign(new Move { })
+          .Tag<Tag1>().Tag<Tag2>();
       }
     }
     [IterationCleanup]
     public void Cleanup() => world.Clear();
 
     [Benchmark]
-    public void Remove1SparseComponentFromEntities() => Remove1<SparsePos>();
+    public void Remove1ComponentFromEntities() => Remove1<Pos>();
     [Benchmark]
-    public void Remove2SparseComponentsFromEntities() => Remove2<SparsePos, SparseMove>();
+    public void Remove2ComponentsFromEntities() => Remove2<Pos, Move>();
     [Benchmark]
-    public void Remove1DenseComponentFromEntities() => Remove1<DensePos>();
+    public void Remove1TagFromEntities() => Remove1<Tag1>();
     [Benchmark]
-    public void Remove2DenseComponentsFromEntities() => Remove2<DensePos, DenseMove>();
-    [Benchmark]
-    public void Remove1SparseTagFromEntities() => Remove1<SparseTag1>();
-    [Benchmark]
-    public void Remove2SparseTagFromEntities() => Remove2<SparseTag1, SparseTag2>();
-    [Benchmark]
-    public void Remove1DenseTagFromEntities() => Remove1<DenseTag1>();
-    [Benchmark]
-    public void Remove2DenseTagFromEntities() => Remove2<DenseTag1, DenseTag2>();
+    public void Remove2TagFromEntities() => Remove2<Tag1, Tag2>();
 
     private void Remove1<T>() where T : struct, IBaseComponent {
       for (int i = 0; i < N; i++) {

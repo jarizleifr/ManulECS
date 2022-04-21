@@ -1,12 +1,6 @@
 using System;
 
 namespace ManulECS {
-  [AttributeUsage(AttributeTargets.Struct)]
-  public sealed class SparseAttribute : Attribute { }
-
-  [AttributeUsage(AttributeTargets.Struct)]
-  public sealed class DenseAttribute : Attribute { }
-
   public abstract class Pool {
     protected Entity[] entities;
 

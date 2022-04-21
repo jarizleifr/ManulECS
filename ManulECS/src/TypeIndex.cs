@@ -4,17 +4,19 @@ using System.Reflection;
 
 namespace ManulECS {
   internal static class TypeIndex {
+    internal const int MAX_INDEX = byte.MaxValue;
+
     private static class Index<T> where T : struct, IBaseComponent {
-      internal static uint value = uint.MaxValue;
-      internal static void Reset() => value = uint.MaxValue;
+      internal static byte value = byte.MaxValue;
+      internal static void Reset() => value = byte.MaxValue;
     }
-    private static uint next = 0;
+    private static byte next = 0;
     private readonly static List<Type> types = new();
 
-    internal static uint Get<T>() where T : struct, IBaseComponent =>
+    internal static byte Get<T>() where T : struct, IBaseComponent =>
       Index<T>.value;
 
-    internal static uint Create<T>() where T : struct, IBaseComponent {
+    internal static byte Create<T>() where T : struct, IBaseComponent {
       var type = typeof(T);
       if (!types.Contains(typeof(T))) {
         types.Add(type);

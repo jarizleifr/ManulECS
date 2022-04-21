@@ -21,9 +21,9 @@ namespace ManulECS.Tests {
     [Fact]
     public void ResetsIndices() {
       TypeIndex.Reset();
-      Assert.Equal(uint.MaxValue, TypeIndex.Get<Component1>());
-      Assert.Equal(uint.MaxValue, TypeIndex.Get<Component2>());
-      Assert.Equal(uint.MaxValue, TypeIndex.Get<Component3>());
+      Assert.Equal(TypeIndex.MAX_INDEX, TypeIndex.Get<Component1>());
+      Assert.Equal(TypeIndex.MAX_INDEX, TypeIndex.Get<Component2>());
+      Assert.Equal(TypeIndex.MAX_INDEX, TypeIndex.Get<Component3>());
     }
   }
 }

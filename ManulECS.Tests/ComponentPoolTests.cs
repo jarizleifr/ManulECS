@@ -2,21 +2,11 @@ using System.Collections.Generic;
 using Xunit;
 
 namespace ManulECS.Tests {
-  public class DenseComponentPoolTests : ComponentPoolFacts<DensePool<Component1>> {
-    protected override Pool<Component1> GetPool() =>
-      new DensePool<Component1>() { Key = new Key(0, 1u) };
-  }
-
-  public class SparseComponentPoolTests : ComponentPoolFacts<SparsePool<Component1>> {
-    protected override Pool<Component1> GetPool() =>
-      new SparsePool<Component1>() { Key = new Key(0, 1u) };
-  }
-
-  public abstract class ComponentPoolFacts<T> : ComponentPoolFacts where T : Pool<Component1> {
+  public class ComponentPoolFacts : PoolFacts {
     private static Component1 Value(uint value) => new() { value = value };
     private readonly Pool<Component1> pool;
 
-    protected abstract Pool<Component1> GetPool();
+    private Pool<Component1> GetPool() => new() { Key = new Key(0, 1u) };
 
     protected override List<Entity> CreateTestEntities(int count) {
       var entities = new List<Entity>();
@@ -70,7 +60,7 @@ namespace ManulECS.Tests {
     }
   }
 
-  public abstract class ComponentPoolFacts {
+  public abstract class PoolFacts {
     protected Pool untypedPool;
     protected abstract List<Entity> CreateTestEntities(int count);
 

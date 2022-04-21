@@ -72,8 +72,8 @@ namespace ManulECS {
       bool TrySerializeEntity(Entity entity, out JObject serialized) {
         serialized = default;
         var componentArray = new JArray();
-        foreach (var idx in world.entityFlags[entity.Id]) {
-          var component = world.pools.flagged[idx].Get(entity);
+        foreach (var idx in world.entityKeys[entity.Id]) {
+          var component = world.PoolByKeyIndex(idx).Get(entity);
           if (!DiscardComponent(component)) {
             if (DiscardEntity(component) || !MatchesProfile(component)) {
               return false;

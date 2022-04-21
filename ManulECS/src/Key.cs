@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 
 namespace ManulECS {
   internal unsafe struct Key : IEquatable<Key> {
@@ -7,8 +8,12 @@ namespace ManulECS {
 
     internal Key(int index, uint bits) => u[index] = bits;
 
-    internal bool this[Key flag] => IsSubsetOf(flag);
+    internal bool this[Key flag] {
+      [MethodImpl(MethodImplOptions.AggressiveInlining)]
+      get => IsSubsetOf(flag);
+    }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool IsSubsetOf(Key filter) {
       for (int i = 0; i < MAX_SIZE; i++) {
         if ((u[i] & filter.u[i]) != filter.u[i]) return false;

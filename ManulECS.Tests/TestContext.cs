@@ -7,12 +7,6 @@ namespace ManulECS.Tests {
   public struct Component4 : IComponent { public int v1; public int v2; }
   public struct Tag : ITag { }
 
-  [Dense]
-  public struct DenseTag : ITag { }
-
-  [Dense]
-  public struct Dense : IComponent { }
-
   [ECSSerialize("test-profile")]
   public struct ProfileComponent1 : IComponent { }
 
@@ -42,8 +36,6 @@ namespace ManulECS.Tests {
         .Declare<Component3>()
         .Declare<Component4>()
         .Declare<Tag>()
-        .Declare<DenseTag>()
-        .Declare<Dense>()
         .Declare<ProfileComponent1>()
         .Declare<ProfileComponent2>()
         .Declare<DiscardComponent>()

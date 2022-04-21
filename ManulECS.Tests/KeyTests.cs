@@ -72,11 +72,11 @@ namespace ManulECS.Tests {
 
     [Fact]
     public void CreatesNewFlagsSequentially() {
-      var pools = new Pools { };
-      Assert.Equal((0, 1u), pools.GetNextFlag());
-      Assert.Equal((0, 2u), pools.GetNextFlag());
-      Assert.Equal((0, 4u), pools.GetNextFlag());
-      Assert.Equal((0, 8u), pools.GetNextFlag());
+      var world = new World { };
+      Assert.Equal((0, 1u), world.GetNextFlag());
+      Assert.Equal((0, 2u), world.GetNextFlag());
+      Assert.Equal((0, 4u), world.GetNextFlag());
+      Assert.Equal((0, 8u), world.GetNextFlag());
     }
   }
 }

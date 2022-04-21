@@ -11,10 +11,10 @@ namespace ManulECS.Benchmark {
     [IterationSetup]
     public void Setup() {
       for (int i = 0; i < N; i++) {
-        world.Handle().Tag<SparseTag1>().Tag<SparseTag2>();
+        world.Handle().Tag<Tag1>().Tag<Tag2>();
       }
-      world.View<SparseTag1>();
-      world.View<SparseTag1, SparseTag2>();
+      world.View<Tag1>();
+      world.View<Tag1, Tag2>();
     }
 
     [IterationCleanup]
@@ -23,14 +23,14 @@ namespace ManulECS.Benchmark {
     [Benchmark]
     public void Loop1Tag() {
       Entity entity;
-      foreach (var e in world.View<SparseTag1>()) {
+      foreach (var e in world.View<Tag1>()) {
         entity = e;
       }
     }
     [Benchmark]
     public void Loop2Tags() {
       Entity entity;
-      foreach (var e in world.View<SparseTag1, SparseTag2>()) {
+      foreach (var e in world.View<Tag1, Tag2>()) {
         entity = e;
       }
     }

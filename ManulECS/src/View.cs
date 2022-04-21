@@ -17,7 +17,7 @@ namespace ManulECS {
       this.key = key;
 
       foreach (var idx in key) {
-        var pool = world.pools.typed[idx];
+        var pool = world.indexedPools[idx];
         pool.OnUpdate += SetToUpdate;
       }
       Update(world);
@@ -34,7 +34,7 @@ namespace ManulECS {
       if (shouldUpdate) {
         Pool smallest = null;
         foreach (var idx in key) {
-          var pool = world.pools.typed[idx];
+          var pool = world.indexedPools[idx];
           if (smallest == null || smallest.Count > pool.Count) {
             smallest = pool;
           }
@@ -42,7 +42,7 @@ namespace ManulECS {
         Count = 0;
         ArrayUtil.EnsureSize((uint)smallest.Count, ref entities, Entity.NULL_ENTITY);
         foreach (var entity in smallest) {
-          if (world.entityFlags[entity.Id].IsSubsetOf(key)) {
+          if (world.entityKeys[entity.Id][key]) {
             entities[Count++] = entity;
           }
         }

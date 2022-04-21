@@ -5,27 +5,24 @@ using Newtonsoft.Json;
 namespace ManulECS {
   [JsonObject(MemberSerialization.OptIn)]
   public readonly record struct Entity {
-    internal readonly static Entity NULL_ENTITY = new(NULL_ID, 0);
-    internal const uint NULL_ID = 0xFFFFFF;
+    public static readonly Entity NULL_ENTITY = new(NULL_ID, 0);
+    public const uint NULL_ID = 0xFFFFFF;
 
     [JsonProperty("uuid")]
     private readonly uint value;
 
-    internal uint Id {
+    public uint Id {
       [MethodImpl(MethodImplOptions.AggressiveInlining)]
-      get => value & NULL_ID;
+      get => value >> 8;
     }
-    internal byte Version => (byte)((value & 0xFF000000) >> 24);
+    public byte Version => (byte)value;
 
-    internal Entity(uint id, byte version) {
+    public Entity(uint id, byte version) {
       if (id > NULL_ID) throw new Exception("FATAL ERROR: Max number of entities exceeded!");
-
-      value = version;
-      value <<= 24;
-      value |= id & NULL_ID;
+      value = id << 8 | version;
     }
 
     [JsonConstructor]
-    internal Entity(uint uuid) => value = uuid;
+    public Entity(uint uuid) => value = uuid << 8;
   }
 }

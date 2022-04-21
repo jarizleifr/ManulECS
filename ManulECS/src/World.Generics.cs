@@ -16,7 +16,7 @@ namespace ManulECS {
     /// <summary>Get a pool of components</summary>
     /// <returns>Pool of components of type T</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Pool<T> Pool<T>() where T : struct, Cp => pools.typed[TypeIndex.Get<T>()] as Pool<T>;
+    public Pool<T> Pool<T>() where T : struct, Cp => indexedPools[TypeIndex.Get<T>()] as Pool<T>;
 
     /// <summary>Get two pools of components</summary>
     /// <returns>Tuple of pools of components of types T1, T2</returns>

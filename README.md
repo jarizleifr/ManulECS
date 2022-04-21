@@ -201,56 +201,40 @@ Intel Core i5-8600K CPU 3.60GHz (Coffee Lake), 1 CPU, 6 logical and 6 physical c
 
 ## Creation and removal
 
-It's hard to get good benchmarks as creation and removal is generally quite fast, and you'll need to pump N value into unreal amounts to get good data, but working with 10 million entities, we can make some observations:
+|                        Method |        N |       Mean |    Error |   StdDev |     Median |
+|------------------------------ |--------- |-----------:|---------:|---------:|-----------:|
+|                CreateEntities | 10000000 |   363.2 ms |  7.22 ms | 13.56 ms |   364.7 ms |
+|  CreateEntitiesWith1Component | 10000000 |   681.3 ms |  5.20 ms |  4.86 ms |   680.0 ms |
+| CreateEntitiesWith2Components | 10000000 | 1,089.5 ms | 21.49 ms | 47.18 ms | 1,114.5 ms |
+|        CreateEntitiesWith1Tag | 10000000 |   574.9 ms |  8.21 ms |  7.68 ms |   575.7 ms |
+|       CreateEntitiesWith2Tags | 10000000 |   740.5 ms | 13.76 ms | 13.51 ms |   738.1 ms |
 
-1. Both creation and removal is faster on sparsely mapped components.
-2. Sparsely mapped components take roughly 1.5 times more memory than densely mapped.
-3. Creating tags is slightly faster than components, but removing them is about the same. Tags take less memory than either type of component.
-
-|                              Method |        N |       Mean |    Error |   StdDev | Allocated |
-|------------------------------------ |--------- |-----------:|---------:|---------:|----------:|
-|                      CreateEntities | 10000000 |   330.7 ms |  6.51 ms | 10.51 ms |      1 GB |
-|  CreateEntitiesWith1SparseComponent | 10000000 |   594.9 ms |  4.61 ms |  4.31 ms |      2 GB |
-| CreateEntitiesWith2SparseComponents | 10000000 |   956.6 ms | 18.75 ms | 31.33 ms |      3 GB |
-|   CreateEntitiesWith1DenseComponent | 10000000 |   702.6 ms | 11.96 ms | 11.18 ms |      2 GB |
-|  CreateEntitiesWith2DenseComponents | 10000000 | 1,115.6 ms | 11.72 ms | 10.97 ms |      2 GB |
-|        CreateEntitiesWith1SparseTag | 10000000 |   475.1 ms |  8.87 ms |  8.71 ms |      1 GB |
-|       CreateEntitiesWith2SparseTags | 10000000 |   594.2 ms |  6.41 ms |  6.00 ms |      2 GB |
-|         CreateEntitiesWith1DenseTag | 10000000 |   539.7 ms | 10.51 ms | 11.24 ms |      1 GB |
-|        CreateEntitiesWith2DenseTags | 10000000 |   738.3 ms |  7.57 ms |  7.08 ms |      1 GB |
-
-|                              Method |        N |      Mean |    Error |   StdDev |
-|------------------------------------ |--------- |----------:|---------:|---------:|
-|  Remove1SparseComponentFromEntities | 10000000 |  89.40 ms | 0.675 ms | 0.631 ms |
-| Remove2SparseComponentsFromEntities | 10000000 | 180.25 ms | 1.182 ms | 1.048 ms |
-|   Remove1DenseComponentFromEntities | 10000000 | 246.64 ms | 2.289 ms | 2.142 ms |
-|  Remove2DenseComponentsFromEntities | 10000000 | 508.07 ms | 5.175 ms | 4.587 ms |
-|        Remove1SparseTagFromEntities | 10000000 |  87.23 ms | 1.553 ms | 1.453 ms |
-|        Remove2SparseTagFromEntities | 10000000 | 177.42 ms | 1.722 ms | 1.526 ms |
-|         Remove1DenseTagFromEntities | 10000000 | 229.81 ms | 3.419 ms | 3.198 ms |
-|         Remove2DenseTagFromEntities | 10000000 | 470.47 ms | 6.776 ms | 6.338 ms |
+|                        Method |        N |     Mean |   Error |  StdDev |
+|------------------------------ |--------- |---------:|--------:|--------:|
+|  Remove1ComponentFromEntities | 10000000 | 152.4 ms | 1.16 ms | 1.09 ms |
+| Remove2ComponentsFromEntities | 10000000 | 312.9 ms | 4.97 ms | 4.65 ms |
+|        Remove1TagFromEntities | 10000000 | 146.5 ms | 1.08 ms | 1.01 ms |
+|        Remove2TagFromEntities | 10000000 | 293.2 ms | 2.06 ms | 1.93 ms |
 
 ## Iterating views
 
-All tag iterations finished looping at around 74 μs. As tags have no values and cannot be operated on, there's practically no difference between iterating 1 or 2 tags.
-
 For components, the update functions are simple move operations with an x,y transform applied on x,y coordinates.
 
-Using a sparse pool:
+The worst case scenario is having to build the entity view on every iteration.
 
-|            Method |      N |     Mean |   Error |  StdDev | Allocated |
-|------------------ |------- |---------:|--------:|--------:|----------:|
-|  Update1Component | 100000 | 255.9 μs | 2.90 μs | 2.71 μs |       1 B |
-| Update2Components | 100000 | 457.3 μs | 2.64 μs | 2.06 μs |       3 B |
+|                              Method |      N |     Mean |   Error |  StdDev |
+|------------------------------------ |------- |---------:|--------:|--------:|
+|                    Update1Component | 100000 | 120.2 us | 1.29 us | 1.20 us |
+|                   Update2Components | 100000 | 251.3 us | 2.36 us | 2.21 us |
+| Update2Components_WorstCaseScenario | 100000 | 686.6 us | 3.01 us | 2.67 us |
 
-Using a dense pool:
+All tag iterations were quite fast and there's virtually no difference between looping through 1 or 2 tags.
 
-|            Method |      N |       Mean |    Error |   StdDev | Allocated |
-|------------------ |------- |-----------:|---------:|---------:|----------:|
-|  Update1Component | 100000 |   821.2 μs | 13.35 μs | 12.49 μs |       3 B |
-| Update2Components | 100000 | 1,618.1 μs | 25.01 μs | 23.39 μs |       1 B |
+|    Method |      N |     Mean |    Error |   StdDev |
+|---------- |------- |---------:|---------:|---------:|
+|  Loop1Tag | 100000 | 25.32 us | 0.169 us | 0.158 us |
+| Loop2Tags | 100000 | 25.24 us | 0.166 us | 0.147 us |
 
-Again, sparse pools are a lot faster, but one can optimize memory usage with dense pools.
 
 # Extra - Code generation
 

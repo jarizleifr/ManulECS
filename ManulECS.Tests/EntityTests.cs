@@ -4,6 +4,12 @@ namespace ManulECS.Tests {
   [Collection("World")]
   public class EntityTests : TestContext {
     [Fact]
+    public void CreatesCorrectValues() {
+      var entity = new Entity(666, 42);
+      Assert.Equal(666u, entity.Id);
+      Assert.Equal(42, entity.Version);
+    }
+    [Fact]
     public void UpdatesCount_OnCreate() {
       world.Create();
       world.Create();
@@ -143,8 +149,8 @@ namespace ManulECS.Tests {
       var c1 = world.GetRef<Component1>(clone);
       var c2 = world.GetRef<Component2>(clone);
 
-      var d1 = world.entityFlags[origin.Id];
-      var d2 = world.entityFlags[clone.Id];
+      var d1 = world.entityKeys[origin.Id];
+      var d2 = world.entityKeys[clone.Id];
 
       Assert.Equal(d1, d2);
       Assert.Equal(2, world.Pool<Component1>().Count);

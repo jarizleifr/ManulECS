@@ -19,21 +19,13 @@ namespace ManulECS.Benchmark {
     }
 
     [Benchmark]
-    public void CreateEntitiesWith1SparseComponent() => CreateWith1Component<SparsePos>();
+    public void CreateEntitiesWith1Component() => CreateWith1Component<Pos>();
     [Benchmark]
-    public void CreateEntitiesWith2SparseComponents() => CreateWith2Components<SparsePos, SparseMove>();
+    public void CreateEntitiesWith2Components() => CreateWith2Components<Pos, Move>();
     [Benchmark]
-    public void CreateEntitiesWith1DenseComponent() => CreateWith1Component<DensePos>();
+    public void CreateEntitiesWith1Tag() => CreateWith1Tag<Tag1>();
     [Benchmark]
-    public void CreateEntitiesWith2DenseComponents() => CreateWith2Components<DensePos, DenseMove>();
-    [Benchmark]
-    public void CreateEntitiesWith1SparseTag() => CreateWith1Tag<SparseTag1>();
-    [Benchmark]
-    public void CreateEntitiesWith2SparseTags() => CreateWith2Tags<SparseTag1, SparseTag2>();
-    [Benchmark]
-    public void CreateEntitiesWith1DenseTag() => CreateWith1Tag<DenseTag1>();
-    [Benchmark]
-    public void CreateEntitiesWith2DenseTags() => CreateWith2Tags<DenseTag1, DenseTag2>();
+    public void CreateEntitiesWith2Tags() => CreateWith2Tags<Tag1, Tag2>();
 
     private void CreateWith1Component<T>() where T : struct, IComponent {
       for (int i = 0; i < N; i++) {
