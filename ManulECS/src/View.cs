@@ -40,8 +40,8 @@ namespace ManulECS {
           }
         }
         Count = 0;
-        ArrayUtil.EnsureSize((uint)smallest.Entities.Length, ref entities, Entity.NULL_ENTITY);
-        foreach (var entity in smallest.Entities) {
+        ArrayUtil.EnsureSize((uint)smallest.Count, ref entities, Entity.NULL_ENTITY);
+        foreach (var entity in smallest) {
           if (world.entityFlags[entity.Id].IsSubsetOf(key)) {
             entities[Count++] = entity;
           }
@@ -50,21 +50,23 @@ namespace ManulECS {
       }
     }
 
-    public ref struct ViewEnumerator {
-      private readonly Span<Entity> entities;
-      private int index;
+    /// <summary>Returns an enumerator that iterates through entities.</summary>
+    public EntityEnumerator GetEnumerator() => new(entities, Count);
+  }
 
-      public ViewEnumerator(Entity[] entities, int length) {
-        this.entities = entities.AsSpan(0, length);
-        index = -1;
-      }
+  public struct EntityEnumerator {
+    private readonly Entity[] entities;
+    private readonly int length;
+    private int index;
 
-      public Entity Current => entities[index];
-
-      public bool MoveNext() => ++index < entities.Length;
+    public EntityEnumerator(Entity[] entities, int length) {
+      this.entities = entities;
+      this.length = length;
+      index = -1;
     }
 
-    /// <summary>Returns an enumerator that iterates through entities.</summary>
-    public ViewEnumerator GetEnumerator() => new(entities, Count);
+    public Entity Current => entities[index];
+
+    public bool MoveNext() => ++index < length;
   }
 }

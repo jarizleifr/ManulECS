@@ -174,7 +174,7 @@ namespace ManulECS {
     public void Clear<T>() where T : struct, IBaseComponent {
       var pool = UntypedPool<T>();
       var key = pool.Key;
-      foreach (var entity in pool.Entities) {
+      foreach (var entity in pool) {
         ref var flags = ref entityFlags[entity.Id];
         flags -= key;
       }

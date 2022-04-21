@@ -14,8 +14,6 @@ namespace ManulECS {
     internal int Capacity => entities.Length;
     internal Key Key { get; init; }
 
-    internal Span<Entity> Entities => entities.AsSpan(0, Count);
-
     internal Action OnUpdate { get; set; }
 
     internal abstract bool Has(in Entity entity);
@@ -28,5 +26,7 @@ namespace ManulECS {
     internal abstract void Clear();
 
     public Pool() => Reset();
+
+    public EntityEnumerator GetEnumerator() => new(entities, Count);
   }
 }

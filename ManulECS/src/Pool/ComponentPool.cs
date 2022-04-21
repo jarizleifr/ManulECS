@@ -20,15 +20,17 @@ namespace ManulECS {
       entity.Id < mapping.Length &&
       mapping[entity.Id] != Entity.NULL_ID;
 
-    internal override void Set(in Entity entity, T item) {
+    internal override void Set(in Entity entity, T component) {
       var id = entity.Id;
       ArrayUtil.EnsureSize(id, ref mapping, Entity.NULL_ID);
       ref var key = ref mapping[id];
       if (key == Entity.NULL_ID) {
         key = (uint)Count;
-        AddEntry(entity, item);
+        ArrayUtil.SetWithResize((uint)Count, ref entities, entity, ref components, component);
+        Count++;
       } else {
-        UpdateEntry(key, entity, item);
+        entities[key] = entity;
+        components[key] = component;
       }
       OnUpdate?.Invoke();
     }
@@ -41,7 +43,9 @@ namespace ManulECS {
           if (key == Count - 1) {
             Count--;
           } else {
-            ReplaceEntryWithLast(key);
+            Count--;
+            entities[key] = entities[Count];
+            components[key] = components[Count];
             mapping[entities[Count].Id] = key;
           }
           key = Entity.NULL_ID;
@@ -88,13 +92,15 @@ namespace ManulECS {
 
     internal override bool Has(in Entity entity) => mapping.ContainsKey(entity.Id);
 
-    internal override void Set(in Entity entity, T item) {
+    internal override void Set(in Entity entity, T component) {
       var id = entity.Id;
-      if (mapping.TryGetValue(id, out var key)) {
-        UpdateEntry(key, entity, item);
-      } else {
+      if (!mapping.TryGetValue(id, out var key)) {
         mapping.Add(id, (uint)Count);
-        AddEntry(entity, item);
+        ArrayUtil.SetWithResize((uint)Count, ref entities, entity, ref components, component);
+        Count++;
+      } else {
+        entities[key] = entity;
+        components[key] = component;
       }
       OnUpdate?.Invoke();
     }
@@ -105,7 +111,9 @@ namespace ManulECS {
         if (key == Count - 1) {
           Count--;
         } else {
-          ReplaceEntryWithLast(key);
+          Count--;
+          entities[key] = entities[Count];
+          components[key] = components[Count];
           mapping[entities[Count].Id] = key;
         }
         mapping.Remove(id);
@@ -138,8 +146,6 @@ namespace ManulECS {
   public abstract class Pool<T> : Pool where T : struct {
     protected T[] components;
 
-    internal Span<T> Components => components.AsSpan(0, Count);
-
     public abstract ref T this[in Entity entity] {
       [MethodImpl(MethodImplOptions.AggressiveInlining)]
       get;
@@ -147,21 +153,5 @@ namespace ManulECS {
 
     internal override void Set(in Entity entity) => Set(entity, default);
     internal abstract void Set(in Entity entity, T component);
-
-    protected void AddEntry(in Entity entity, T component) {
-      ArrayUtil.SetWithResize((uint)Count, ref entities, entity, ref components, component);
-      Count++;
-    }
-
-    protected void UpdateEntry(uint index, in Entity entity, T component) {
-      entities[index] = entity;
-      components[index] = component;
-    }
-
-    protected void ReplaceEntryWithLast(uint index) {
-      Count--;
-      entities[index] = entities[Count];
-      components[index] = components[Count];
-    }
   }
 }

@@ -56,7 +56,7 @@ namespace ManulECS.Benchmark {
         //typeof(CreateEntity),
         //typeof(RemoveEntity),
         typeof(SparseComponents),
-        //typeof(DenseComponents),
+        typeof(DenseComponents),
         //typeof(SparseTags),
         //typeof(DenseTags),
       }).RunAll();
