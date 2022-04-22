@@ -2,60 +2,60 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using static ManulECS.ArrayUtil;
 
 namespace ManulECS {
   public partial class World {
+    internal const int INITIAL_CAPACITY = 4;
     private uint destroyed = Entity.NULL_ID;
-    private uint nextEntityId = 0;
+    private uint nextId = 0;
 
-    internal Entity[] entities = new Entity[4];
-    internal Key[] entityKeys = new Key[4];
+    private Entity[] entities = new Entity[INITIAL_CAPACITY];
+    private Key[] entityKeys = new Key[INITIAL_CAPACITY];
 
-    internal readonly Dictionary<Type, object> resources = new();
+    internal ref Key EntityKey(in Entity entity) => ref entityKeys[entity.Id];
+
+    internal readonly PoolCollection pools = new();
     internal readonly ViewCache viewCache = new();
+
+    private readonly Dictionary<Type, object> resources = new();
+    internal IEnumerable<object> Resources => resources.Values;
 
     /// <summary>Creates a new empty Entity.</summary>
     public Entity Create() {
       Entity entity;
       if (destroyed == Entity.NULL_ID) {
-        entity = new Entity(nextEntityId, 0);
-        ArrayUtil.SetWithResize(nextEntityId, ref entities, entity, ref entityKeys, default);
-        nextEntityId++;
+        entity = new(nextId, 0);
+        EnsureSize(ref entities, nextId, Entity.NULL_ENTITY);
+        EnsureSize(ref entityKeys, nextId);
+        (entities[nextId], entityKeys[nextId]) = (entity, default);
+        nextId++;
       } else {
-        var oldEntity = entities[destroyed];
-        entity = new Entity(destroyed, oldEntity.Version);
-        entities[destroyed] = entity;
-        entityKeys[destroyed] = default;
-        destroyed = oldEntity.Id;
+        var (id, version) = entities[destroyed];
+        entity = new(destroyed, version);
+        (entities[destroyed], entityKeys[destroyed]) = (entity, default);
+        destroyed = id;
       }
       return entity;
     }
 
-    /// <summary>
-    /// Creates a new empty Entity wrapped in an EntityHandle, which can be used
-    /// to concisely build an Entity out of multiple components in sequence.
-    /// </summary>
+    /// <summary>Creates a new entity and wraps it in a handle.</summary>
     public EntityHandle Handle() => Handle(Create());
 
-    /// <summary>
-    /// Wraps an Entity in an EntityHandle, for ease of access and more concise assignment of components and tags.
-    /// </summary>
-    public EntityHandle Handle(in Entity entity) => new() {
-      World = this,
-      Entity = entity,
-    };
+    /// <summary>Wraps the provided entity in a handle.</summary>
+    public EntityHandle Handle(in Entity entity) => new(this, entity);
 
     /// <summary>Removes an existing entity.</summary>
-    /// <returns>true if entity successfully removed, false if entity did not exist.</returns>
+    /// <returns>true if entity successfully removed, false otherwise</returns>
     public bool Remove(in Entity entity) {
       if (IsAlive(entity)) {
-        ref var key = ref entityKeys[entity.Id];
+        ref var key = ref EntityKey(entity);
         foreach (var idx in key) {
-          PoolByKeyIndex(idx).Remove(entity);
+          pools.PoolByKeyIndex(idx).Remove(entity);
         }
-        entities[entity.Id] = new Entity(destroyed, (byte)(entity.Version + 1));
-        key = default;
-        destroyed = entity.Id;
+        var (id, version) = entity;
+        (entities[id], key) = (new(destroyed, ++version), default);
+        destroyed = id;
         return true;
       }
       return false;
@@ -63,12 +63,12 @@ namespace ManulECS {
 
     /// <summary>Clears all entities, components and resources from the world.</summary>
     public void Clear() {
-      entities = new Entity[4];
-      entityKeys = new Key[4];
+      entities = new Entity[INITIAL_CAPACITY];
+      entityKeys = new Key[INITIAL_CAPACITY];
       destroyed = Entity.NULL_ID;
-      nextEntityId = 0;
+      nextId = 0;
 
-      Array.ForEach(indexedPools, pool => pool?.Reset());
+      pools.Clear();
       resources.Clear();
       viewCache.Clear();
     }
@@ -79,7 +79,7 @@ namespace ManulECS {
     /// <summary>Declare a component/tag of type T for use.</summary>
     /// <returns>The calling World object, for chaining.</returns>
     public World Declare<T>() where T : struct, IBaseComponent {
-      Register<T>();
+      pools.Register<T>();
       return this;
     }
 
@@ -92,16 +92,14 @@ namespace ManulECS {
       UntypedPool<T>().Has(entity);
 
     /// <summary>Gets a component reference of type T from an entity.</summary>
-    /// <exception cref="System.IndexOutOfRangeException">Thrown when entity has no such component</exception>
-    public ref T GetRef<T>(in Entity entity) where T : struct, IComponent =>
+    public ref T Get<T>(in Entity entity) where T : struct, IComponent =>
       ref Pool<T>()[entity];
 
     /// <summary>Gets a component of type T from an entity, if it exists.</summary>
     /// <returns>true if component found, false otherwise</returns>
-    public bool TryGet<T>(in Entity entity, out T component)
-        where T : struct, IComponent {
+    public bool TryGet<T>(in Entity entity, out T component) where T : struct, IComponent {
       if (Has<T>(entity)) {
-        component = GetRef<T>(entity);
+        component = Get<T>(entity);
         return true;
       }
       component = default;
@@ -113,8 +111,7 @@ namespace ManulECS {
       if (IsAlive(entity)) {
         var pool = TagPool<T>();
         var key = pool.Key;
-        ref var flags = ref entityKeys[entity.Id];
-
+        ref var flags = ref EntityKey(entity);
         if (!flags[key]) {
           flags += key;
           pool.Set(entity);
@@ -122,13 +119,12 @@ namespace ManulECS {
       }
     }
 
-    /// <summary>Assign a component of type T to an entity. Does nothing if component already exists.</summary>
+    /// <summary>Assign a component of type T to an entity, if it doesn't exist.</summary>
     public void Assign<T>(in Entity entity, T component) where T : struct, IComponent {
       if (IsAlive(entity)) {
         var pool = Pool<T>();
         var key = pool.Key;
-        ref var flags = ref entityKeys[entity.Id];
-
+        ref var flags = ref EntityKey(entity);
         if (!flags[key]) {
           flags += key;
           pool.Set(entity, component);
@@ -140,7 +136,7 @@ namespace ManulECS {
     public void Patch<T>(in Entity entity, T component) where T : struct, IComponent {
       if (IsAlive(entity)) {
         var pool = Pool<T>();
-        ref var flags = ref entityKeys[entity.Id];
+        ref var flags = ref EntityKey(entity);
         flags += pool.Key;
         pool.Set(entity, component);
       }
@@ -150,20 +146,26 @@ namespace ManulECS {
     public void Remove<T>(in Entity entity) where T : struct, IBaseComponent {
       if (IsAlive(entity)) {
         var pool = UntypedPool<T>();
-        ref var flags = ref entityKeys[entity.Id];
+        ref var flags = ref EntityKey(entity);
         flags -= pool.Key;
         pool.Remove(entity);
+      }
+    }
+
+    /// <summary>Creates N copies of an entity, with all the same components and tags.</summary>
+    public void Clone(in Entity entity, int count) {
+      for (int i = 0; i < count; i++) {
+        Clone(entity);
       }
     }
 
     /// <summary>Creates a new copy of an entity, with all the same components and tags.</summary>
     public Entity Clone(in Entity entity) {
       var clone = Create();
-      ref var cloneFlags = ref entityKeys[clone.Id];
-      cloneFlags = entityKeys[entity.Id];
-
+      ref var cloneFlags = ref EntityKey(clone);
+      cloneFlags = EntityKey(entity);
       foreach (var idx in cloneFlags) {
-        var pool = PoolByKeyIndex(idx);
+        var pool = pools.PoolByKeyIndex(idx);
         pool.Clone(entity, clone);
       }
       return clone;
@@ -174,17 +176,14 @@ namespace ManulECS {
       var pool = UntypedPool<T>();
       var key = pool.Key;
       foreach (var entity in pool) {
-        ref var flags = ref entityKeys[entity.Id];
+        ref var flags = ref EntityKey(entity);
         flags -= key;
       }
       pool.Clear();
     }
 
     /// <summary>Gets entity validity.</summary> 
-    public bool IsAlive(Entity entity) {
-      var entityInSlot = entities[entity.Id];
-      return entityInSlot.Id != Entity.NULL_ID && entityInSlot == entity;
-    }
+    public bool IsAlive(in Entity entity) => entity.Id != Entity.NULL_ID && entities[entity.Id] == entity;
 
     /// <summary>Gets the resource of type T.</summary> 
     public T GetResource<T>() => (T)resources[typeof(T)];
@@ -202,20 +201,20 @@ namespace ManulECS {
     internal void SetResource(Type type, object resource) => resources[type] = resource;
     internal void ClearResource(Type type) => resources.Remove(type);
 
-    internal IEnumerable<Entity> Entities => nextEntityId != 0
+    internal IEnumerable<Entity> Entities => nextId != 0
       ? entities.Where((entity, index) => entity.Id == index)
       : Enumerable.Empty<Entity>();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Key Key<T>() where T : struct, IBaseComponent =>
-      indexedPools[TypeIndex.Get<T>()].Key;
+      pools.Pool<T>().Key;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Pool UntypedPool<T>() where T : struct, IBaseComponent =>
-      indexedPools[TypeIndex.Get<T>()];
+      pools.Pool<T>();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal Pool TagPool<T>() where T : struct, ITag =>
-      indexedPools[TypeIndex.Get<T>()];
+    internal TagPool<T> TagPool<T>() where T : struct, ITag =>
+      (TagPool<T>)pools.Pool<T>();
   }
 }

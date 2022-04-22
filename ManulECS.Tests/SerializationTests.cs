@@ -143,12 +143,12 @@ namespace ManulECS.Tests {
       world.Deserialize(json);
 
       foreach (var e in world.View<ComponentWithReference1>()) {
-        ref var c = ref world.GetRef<ComponentWithReference1>(e);
+        ref var c = ref world.Get<ComponentWithReference1>(e);
         Assert.True(world.Has<Component1>(c.entity));
       }
 
       foreach (var e in world.View<ComponentWithReference2>()) {
-        ref var c = ref world.GetRef<ComponentWithReference2>(e);
+        ref var c = ref world.Get<ComponentWithReference2>(e);
         Assert.True(world.Has<Component2>(c.entity));
       }
     }

@@ -16,15 +16,13 @@ namespace ManulECS {
   public class ECSSerializeAttribute : Attribute {
     public string Profile { get; init; } = null;
     public Omit Omit { get; init; } = Omit.None;
-
     public ECSSerializeAttribute(Omit omit) => Omit = omit;
-
     public ECSSerializeAttribute(string profile) => Profile = profile;
   }
 
   public record struct EntityPair(Entity Old, Entity Created);
 
-  internal class EntityFieldConverter : JsonConverter<Entity> {
+  internal sealed class EntityFieldConverter : JsonConverter<Entity> {
     internal EntityPair[] EntityRemap { get; init; }
     public override bool CanWrite => false;
     public override void WriteJson(JsonWriter _w, Entity _v, JsonSerializer _s) { }
@@ -32,7 +30,7 @@ namespace ManulECS {
       EntityRemap.Single(e => e.Old == entity).Created;
   }
 
-  internal class WorldSerializer {
+  internal sealed class WorldSerializer {
     private const string resourcesName = "resources";
     private const string entitiesName = "entities";
     private const string componentsName = "components";
@@ -53,7 +51,7 @@ namespace ManulECS {
 
     internal string Create() {
       var resources = new JArray(
-        world.resources.Values.Where(MatchesProfile).Select(SerializeResource)
+        world.Resources.Where(MatchesProfile).Select(SerializeResource)
       );
       var entities = world.Entities.Aggregate(new JArray(), (acc, cur) => {
         if (TrySerializeEntity(cur, out var serialized)) {
@@ -72,8 +70,8 @@ namespace ManulECS {
       bool TrySerializeEntity(Entity entity, out JObject serialized) {
         serialized = default;
         var componentArray = new JArray();
-        foreach (var idx in world.entityKeys[entity.Id]) {
-          var component = world.PoolByKeyIndex(idx).Get(entity);
+        foreach (var idx in world.EntityKey(entity)) {
+          var component = world.pools.PoolByKeyIndex(idx).Get(entity);
           if (!DiscardComponent(component)) {
             if (DiscardEntity(component) || !MatchesProfile(component)) {
               return false;

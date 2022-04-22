@@ -6,12 +6,12 @@ namespace ManulECS.Tests {
     private static Component1 Value(uint value) => new() { value = value };
     private readonly Pool<Component1> pool;
 
-    private Pool<Component1> GetPool() => new() { Key = new Key(0, 1u) };
+    private static Pool<Component1> GetPool() => new(new Key(0, 1u));
 
     protected override List<Entity> CreateTestEntities(int count) {
       var entities = new List<Entity>();
       for (uint i = 0; i < count; i++) {
-        var entity = new Entity(i);
+        var entity = new Entity(i, 0);
         pool.Set(entity, Value(i));
         entities.Add(entity);
       }

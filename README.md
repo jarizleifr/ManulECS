@@ -2,7 +2,7 @@
 
 An Entity-Component-System and a simple shared resource manager for C#, inspired by DefaultEcs, minECS, specs and Entt.
 
-I wrote a library called ManulEC in 2019 for my roguelike game to provide simple runtime composition similar to Unity, but it had obvious flaws and performance issues, due to not being very cache-friendly. Thus, a need for ManulECS had arisen and I decided to write a new library from scratch, using structs and sparse sets.
+I wrote a library called ManulEC in 2019 for my roguelike game to provide simple runtime composition similar to Unity, but it had obvious flaws and performance issues. Thus, a need for ManulECS had arisen and I decided to write a new library from scratch, using structs and sparse sets.
 
 # Features
 
@@ -76,7 +76,7 @@ world.Patch(entity, new Pos { x = 1, y = 1 });  // Will overwrite
 Tags have no replace function, as there's nothing to replace. Otherwise usage is similar, just that the data is omitted.
 
 ```
-world.Assign<IsPlayer>(entity);
+world.Tag<IsPlayer>(entity);
 ```
 
 You can remove components one by one, or clear all components of type T from all entities. Components and Tags are removed/cleared the same way.
@@ -90,14 +90,16 @@ world.Clear<Tag>();               // Clear all tags of type
 
 ## Entity handles
 
-You can also create an entity handle to easily add multiple components on an entity.
+You can also create an entity handle to easily add multiple components on an entity. Entity handles can implicitly convert to entities.
 
 ```
-var entity = world.Handle()
+var entityHandle = world.Handle()
   .Assign(new Component1 { })
   .Tag<SomeTag>()
-  .Patch(new Component2 { })
-  .GetEntity();
+  .Patch(new Component2 { });
+
+// This works, because EntityHandle implicitly converts to Entity.
+world.Remove(entityHandle); 
 ```
 
 You can also wrap existing entities with a handle.
@@ -180,17 +182,29 @@ public class Level {
 }
 ```
 
-Serialization uses the excellent Json.NET library.
+Serialization uses the excellent Json.NET library. 
+
+`world.Serialize` takes all the entities and resources without profiles set and dumps it as a JSON string, which you can just save to a file.
 
 ```
 var json = world.Serialize();           // Default serialization
 File.WriteAllText("save.json", json);
 ```
 
+Alternatively, you can provide a serialization profile, which will serialize only matching entities and resources.
+
 ```
-var json = world.Serialize("global");   // Serialize only resources and entities set to "global" profile
+var json = world.Serialize("global");   // Serialize only stuff set to "global" profile
 File.WriteAllText("global.json", json);
 ```
+
+`world.Deserialize` works incrementally, so you can combine multiple sets of saved data in a single world.
+
+```
+world.Deserialize(File.ReadAllText("global.json"));
+world.Deserialize(File.ReadAllText("level.json"));
+```
+
 
 # Benchmarks
 
@@ -201,26 +215,33 @@ Intel Core i5-8600K CPU 3.60GHz (Coffee Lake), 1 CPU, 6 logical and 6 physical c
 
 ## Creation and removal
 
-|                        Method |        N |       Mean |    Error |   StdDev |     Median |
-|------------------------------ |--------- |-----------:|---------:|---------:|-----------:|
-|                CreateEntities | 10000000 |   363.2 ms |  7.22 ms | 13.56 ms |   364.7 ms |
-|  CreateEntitiesWith1Component | 10000000 |   681.3 ms |  5.20 ms |  4.86 ms |   680.0 ms |
-| CreateEntitiesWith2Components | 10000000 | 1,089.5 ms | 21.49 ms | 47.18 ms | 1,114.5 ms |
-|        CreateEntitiesWith1Tag | 10000000 |   574.9 ms |  8.21 ms |  7.68 ms |   575.7 ms |
-|       CreateEntitiesWith2Tags | 10000000 |   740.5 ms | 13.76 ms | 13.51 ms |   738.1 ms |
+We start reaching the multi-ms range at creating/removing 100000 entities per frame, which on its own seems like a bit extreme use case.
 
-|                        Method |        N |     Mean |   Error |  StdDev |
-|------------------------------ |--------- |---------:|--------:|--------:|
-|  Remove1ComponentFromEntities | 10000000 | 152.4 ms | 1.16 ms | 1.09 ms |
-| Remove2ComponentsFromEntities | 10000000 | 312.9 ms | 4.97 ms | 4.65 ms |
-|        Remove1TagFromEntities | 10000000 | 146.5 ms | 1.08 ms | 1.01 ms |
-|        Remove2TagFromEntities | 10000000 | 293.2 ms | 2.06 ms | 1.93 ms |
+|                        Method |      N |     Mean |     Error |    StdDev |    Gen 0 |    Gen 1 |    Gen 2 | Allocated |
+|------------------------------ |------- |---------:|----------:|----------:|---------:|---------:|---------:|----------:|
+|                CreateEntities | 100000 | 2.025 ms | 0.0220 ms | 0.0206 ms |  50.0000 |  50.0000 |  50.0000 |      4 MB |
+|  CreateEntitiesWith1Component | 100000 | 4.732 ms | 0.0458 ms | 0.0429 ms |  75.0000 |  75.0000 |  75.0000 |      7 MB |
+| CreateEntitiesWith2Components | 100000 | 7.471 ms | 0.0895 ms | 0.0837 ms | 100.0000 | 100.0000 | 100.0000 |     10 MB |
+|        CreateEntitiesWith1Tag | 100000 | 3.756 ms | 0.0669 ms | 0.0626 ms |  62.5000 |  62.5000 |  62.5000 |      6 MB |
+|       CreateEntitiesWith2Tags | 100000 | 5.922 ms | 0.0365 ms | 0.0324 ms |  87.5000 |  87.5000 |  87.5000 |      7 MB |
+
+Creating tags is a bit faster than creating components, but they're about the same when removing. Fastest way to get rid of components, is to remove the entire entity holding them.
+
+|                        Method |      N |       Mean |    Error |   StdDev |
+|------------------------------ |------- |-----------:|---------:|---------:|
+|                RemoveEntities | 100000 |   649.8 us | 10.06 us |  9.41 us |
+|  Remove1ComponentFromEntities | 100000 | 1,211.8 us | 11.55 us | 10.80 us |
+| Remove2ComponentsFromEntities | 100000 | 2,445.5 us | 19.32 us | 17.13 us |
+|        Remove1TagFromEntities | 100000 | 1,185.9 us | 17.34 us | 16.22 us |
+|        Remove2TagFromEntities | 100000 | 2,390.0 us | 10.53 us |  8.79 us |
 
 ## Iterating views
 
-For components, the update functions are simple move operations with an x,y transform applied on x,y coordinates.
+For components, the update functions are simple move operations with an x/x,y transform applied on x/x,y coordinates.
 
-The worst case scenario is having to build the entity view on every iteration.
+The worst case scenario benchmark rebuilds the entity view on each iteration. There is currently no sorting mechanism, so iteration isn't as cache-friendly as I'd like, but it's _fast enough_, with the added bonus that we can use simple foreach loops instead of complex lambdas (no need to worry about closures) or creating system classes.
+
+My previous benchmark for two component update was 465 us, so I'm pretty happy with the current performance.
 
 |                              Method |      N |     Mean |   Error |  StdDev |
 |------------------------------------ |------- |---------:|--------:|--------:|
@@ -228,13 +249,12 @@ The worst case scenario is having to build the entity view on every iteration.
 |                   Update2Components | 100000 | 251.3 us | 2.36 us | 2.21 us |
 | Update2Components_WorstCaseScenario | 100000 | 686.6 us | 3.01 us | 2.67 us |
 
-All tag iterations were quite fast and there's virtually no difference between looping through 1 or 2 tags.
+For tags, there's virtually no difference between looping through 1 or 2 tags.
 
 |    Method |      N |     Mean |    Error |   StdDev |
 |---------- |------- |---------:|---------:|---------:|
 |  Loop1Tag | 100000 | 25.32 us | 0.169 us | 0.158 us |
 | Loop2Tags | 100000 | 25.24 us | 0.166 us | 0.147 us |
-
 
 # Extra - Code generation
 

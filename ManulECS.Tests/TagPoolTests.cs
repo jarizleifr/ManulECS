@@ -5,7 +5,7 @@ namespace ManulECS.Tests {
   public class TagPoolFacts : PoolFacts {
     private readonly TagPool<Tag> pool;
 
-    protected TagPool<Tag> GetPool() => new() { Key = new Key(0, 1u) };
+    protected static TagPool<Tag> GetPool() => new(new Key(0, 1u));
 
     public TagPoolFacts() {
       pool = GetPool();
@@ -15,7 +15,7 @@ namespace ManulECS.Tests {
     protected override List<Entity> CreateTestEntities(int count) {
       var entities = new List<Entity>();
       for (uint i = 0; i < count; i++) {
-        var entity = new Entity(i);
+        var entity = new Entity(i, 0);
         pool.Set(entity);
         entities.Add(entity);
       }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using static ManulECS.ArrayUtil;
 
 namespace ManulECS {
   /// <summary>A view of entities.</summary>
@@ -7,17 +8,18 @@ namespace ManulECS {
     private readonly Key key;
     private readonly List<Pool> subscribed = new();
 
+    private Entity[] entities = new Entity[World.INITIAL_CAPACITY];
+    private int count = 0;
+    public int Count => count;
+
     private bool shouldUpdate = true;
     internal void SetToUpdate() => shouldUpdate = true;
-
-    private Entity[] entities = new Entity[4];
-    internal int Count { get; private set; }
 
     internal View(World world, Key key) {
       this.key = key;
 
       foreach (var idx in key) {
-        var pool = world.indexedPools[idx];
+        var pool = world.pools.PoolByKeyIndex(idx);
         pool.OnUpdate += SetToUpdate;
       }
       Update(world);
@@ -34,16 +36,16 @@ namespace ManulECS {
       if (shouldUpdate) {
         Pool smallest = null;
         foreach (var idx in key) {
-          var pool = world.indexedPools[idx];
+          var pool = world.pools.PoolByKeyIndex(idx);
           if (smallest == null || smallest.Count > pool.Count) {
             smallest = pool;
           }
         }
-        Count = 0;
-        ArrayUtil.EnsureSize((uint)smallest.Count, ref entities, Entity.NULL_ENTITY);
+        count = 0;
+        EnsureSize(ref entities, smallest.Count, Entity.NULL_ENTITY);
         foreach (var entity in smallest) {
-          if (world.entityKeys[entity.Id][key]) {
-            entities[Count++] = entity;
+          if (world.EntityKey(entity)[key]) {
+            entities[count++] = entity;
           }
         }
         shouldUpdate = false;
@@ -51,7 +53,7 @@ namespace ManulECS {
     }
 
     /// <summary>Returns an enumerator that iterates through entities.</summary>
-    public EntityEnumerator GetEnumerator() => new(entities, Count);
+    public EntityEnumerator GetEnumerator() => new(entities, count);
   }
 
   public struct EntityEnumerator {

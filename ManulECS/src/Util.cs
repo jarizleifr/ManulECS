@@ -4,7 +4,11 @@ using System.Runtime.CompilerServices;
 namespace ManulECS {
   internal static class ArrayUtil {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void EnsureSize<T>(uint minSize, ref T[] array, T defaultValue) {
+    internal static void EnsureSize<T>(ref T[] array, int minSize, T defaultValue = default) =>
+      EnsureSize(ref array, (uint)minSize, defaultValue);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void EnsureSize<T>(ref T[] array, uint minSize, T defaultValue = default) {
       if (minSize >= array.Length) {
         int oldSize = array.Length;
         int newSize = oldSize;
@@ -12,28 +16,8 @@ namespace ManulECS {
           newSize *= 2;
         }
         Array.Resize(ref array, newSize);
-        for (int i = oldSize; i < array.Length; i++) {
-          array[i] = defaultValue;
-        }
+        Array.Fill(array, defaultValue, oldSize, array.Length - oldSize);
       }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void SetWithResize<T>(uint index, ref T[] array, T item) {
-      if (index >= array.Length) {
-        Array.Resize(ref array, array.Length * 2);
-      }
-      array[index] = item;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void SetWithResize<T1, T2>(uint index, ref T1[] array1, T1 item1, ref T2[] array2, T2 item2) {
-      if (index >= array1.Length) {
-        Array.Resize(ref array1, array1.Length * 2);
-        Array.Resize(ref array2, array1.Length * 2);
-      }
-      array1[index] = item1;
-      array2[index] = item2;
     }
   }
 

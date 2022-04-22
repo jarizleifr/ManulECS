@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 
@@ -69,7 +70,7 @@ namespace ManulECS.Tests {
     public void AssignsComponent() {
       var e = world.Create();
       world.Assign(e, new Component1 { value = 100u });
-      var comp = world.GetRef<Component1>(e);
+      var comp = world.Get<Component1>(e);
       Assert.Equal(100u, comp.value);
     }
 
@@ -79,8 +80,21 @@ namespace ManulECS.Tests {
       world.Assign(e, new Component1 { value = 100u });
       world.Patch(e, new Component1 { value = 200u });
 
-      var comp = world.GetRef<Component1>(e);
+      var comp = world.Get<Component1>(e);
       Assert.Equal(200u, comp.value);
+    }
+
+    [Fact]
+    public void CreatesNewKeyFlagsSequentially() {
+      var key = world.Key<Component1>() + world.Key<Component2>() + world.Key<Component3>();
+      var list = new List<int>();
+      foreach (var idx in key) {
+        list.Add(idx);
+      }
+      Assert.Contains(0, list);
+      Assert.Contains(1, list);
+      Assert.Contains(2, list);
+      TypeIndex.Reset();
     }
   }
 }

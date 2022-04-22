@@ -3,9 +3,9 @@ using BenchmarkDotNet.Engines;
 
 namespace ManulECS.Benchmark {
   [MemoryDiagnoser]
-  [SimpleJob(RunStrategy.Throughput, invocationCount: 1)]
+  [SimpleJob(RunStrategy.Throughput, invocationCount: 80)]
   public class CreateEntity : BaseBenchmark {
-    [Params(10000000)]
+    [Params(100000)]
     public int N;
 
     [IterationCleanup]
@@ -17,7 +17,6 @@ namespace ManulECS.Benchmark {
         world.Create();
       }
     }
-
     [Benchmark]
     public void CreateEntitiesWith1Component() => CreateWith1Component<Pos>();
     [Benchmark]

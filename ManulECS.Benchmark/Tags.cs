@@ -4,7 +4,7 @@ using BenchmarkDotNet.Engines;
 namespace ManulECS.Benchmark {
   [MemoryDiagnoser]
   [SimpleJob(RunStrategy.Throughput, invocationCount: 10000)]
-  public class SparseTags : BaseBenchmark {
+  public class Tags : BaseBenchmark {
     [Params(100000)]
     public int N;
 

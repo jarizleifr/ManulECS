@@ -36,7 +36,7 @@ namespace ManulECS.Tests {
 
     [Fact]
     public void UpdatesView_WhenComponentRemoved() {
-      var e1 = world.Handle().Assign(new Component1 { }).Assign(new Component2 { }).GetEntity();
+      var e1 = world.Handle().Assign(new Component1 { }).Assign(new Component2 { });
       var view = world.View<Component1, Component2>();
       Assert.Equal(21, view.Count);
 
@@ -57,11 +57,11 @@ namespace ManulECS.Tests {
     [Fact]
     public void PersistsChanges_WhenComponentChanged_OnIteration() {
       foreach (var e in world.View<Component1>()) {
-        ref var c1 = ref world.GetRef<Component1>(e);
+        ref var c1 = ref world.Get<Component1>(e);
         c1.value = 100u;
       }
       foreach (var e in world.View<Component1>()) {
-        Assert.Equal(100u, world.GetRef<Component1>(e).value);
+        Assert.Equal(100u, world.Get<Component1>(e).value);
       }
     }
 

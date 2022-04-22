@@ -5,7 +5,7 @@ using BenchmarkDotNet.Engines;
 namespace ManulECS.Benchmark {
   [MemoryDiagnoser]
   [SimpleJob(RunStrategy.Throughput, invocationCount: 1000)]
-  public class SparseComponents : BaseBenchmark {
+  public class Components : BaseBenchmark {
     [Params(100000)]
     public int N;
 

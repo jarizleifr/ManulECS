@@ -69,14 +69,5 @@ namespace ManulECS.Tests {
       Assert.Equal(33u, BitUtil.Position(1, 2));
       Assert.Equal(37u, BitUtil.Position(1, 32));
     }
-
-    [Fact]
-    public void CreatesNewFlagsSequentially() {
-      var world = new World { };
-      Assert.Equal((0, 1u), world.GetNextFlag());
-      Assert.Equal((0, 2u), world.GetNextFlag());
-      Assert.Equal((0, 4u), world.GetNextFlag());
-      Assert.Equal((0, 8u), world.GetNextFlag());
-    }
   }
 }

@@ -146,11 +146,11 @@ namespace ManulECS.Tests {
       world.Assign(origin, new Component2 { value = 127 });
 
       var clone = world.Clone(origin);
-      var c1 = world.GetRef<Component1>(clone);
-      var c2 = world.GetRef<Component2>(clone);
+      var c1 = world.Get<Component1>(clone);
+      var c2 = world.Get<Component2>(clone);
 
-      var d1 = world.entityKeys[origin.Id];
-      var d2 = world.entityKeys[clone.Id];
+      var d1 = world.EntityKey(origin);
+      var d2 = world.EntityKey(clone);
 
       Assert.Equal(d1, d2);
       Assert.Equal(2, world.Pool<Component1>().Count);

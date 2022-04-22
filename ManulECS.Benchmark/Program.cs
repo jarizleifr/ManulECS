@@ -36,8 +36,8 @@ namespace ManulECS.Benchmark {
       BenchmarkSwitcher.FromTypes(new[] {
         typeof(CreateEntity),
         typeof(RemoveEntity),
-        typeof(SparseComponents),
-        typeof(SparseTags),
+        typeof(Components),
+        typeof(Tags),
       }).RunAll();
     }
   }

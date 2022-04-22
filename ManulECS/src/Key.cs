@@ -46,6 +46,8 @@ namespace ManulECS {
       return true;
     }
 
+    public override bool Equals(object obj) => obj is Key flags && Equals(flags);
+
     public override int GetHashCode() {
       unchecked {
         int hash = 17;
@@ -56,21 +58,19 @@ namespace ManulECS {
       }
     }
 
-    public override bool Equals(object obj) => obj is Key flags && Equals(flags);
-
     public struct FlagEnumerator {
-      private readonly Key flags;
+      private readonly Key key;
       private int i, j;
 
-      internal FlagEnumerator(Key flags) =>
-        (this.flags, i, j) = (flags, 0, -1);
+      internal FlagEnumerator(Key key) =>
+        (this.key, i, j) = (key, 0, -1);
 
       public int Current => i * 32 + j;
 
       public bool MoveNext() {
         while (i < MAX_SIZE) {
           if (++j < 32) {
-            if ((flags.u[i] & 1u << j) != 0) {
+            if ((key.u[i] & 1u << j) != 0) {
               return true;
             }
           } else {
@@ -81,8 +81,6 @@ namespace ManulECS {
         }
         return false;
       }
-
-      public void Reset() => (i, j) = (0, -1);
     }
 
     public FlagEnumerator GetEnumerator() => new(this);

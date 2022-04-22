@@ -19,6 +19,11 @@ namespace ManulECS {
 
     internal bool Contains(Key key) => views.ContainsKey(key);
 
-    internal void Clear() => views.Clear();
+    internal void Clear() {
+      foreach (var view in views.Values) {
+        view.Dispose();
+      }
+      views.Clear();
+    }
   }
 }
