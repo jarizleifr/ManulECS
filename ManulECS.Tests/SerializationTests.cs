@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Xunit;
 
 namespace ManulECS.Tests {
@@ -13,12 +15,13 @@ namespace ManulECS.Tests {
     }
 
     private void CreateProfileEntities() {
-      var e1 = world.Create();
-      world.Assign(e1, new ProfileComponent1 { });
+      world.Handle()
+        .Assign(new ProfileComponent1 { })
+        .Assign(new Component1 { });
 
-      var e2 = world.Create();
-      world.Assign(e2, new ProfileComponent1 { });
-      world.Assign(e2, new ProfileComponent2 { });
+      world.Handle()
+        .Assign(new ProfileComponent1 { })
+        .Assign(new ProfileComponent2 { });
     }
 
     private void CreateDiscardingEntities() {
@@ -29,22 +32,6 @@ namespace ManulECS.Tests {
       var e2 = world.Create();
       world.Assign(e2, new Component1 { });
       world.Assign(e2, new DiscardEntity { });
-    }
-
-    private void CreateEntitiesWithReferencedComponents() {
-      for (int i = 0; i < 10; i++) {
-        var e = world.Create();
-
-        if (i % 2 == 0) {
-          world.Assign(e, new Component1 { });
-          var item = world.Create();
-          world.Assign(item, new ComponentWithReference1 { entity = e });
-        } else {
-          world.Assign(e, new Component2 { });
-          var item = world.Create();
-          world.Assign(item, new ComponentWithReference2 { entity = e });
-        }
-      }
     }
 
     [Fact]
@@ -93,6 +80,7 @@ namespace ManulECS.Tests {
       Assert.Equal(0, world.Count<Component1>());
       Assert.Equal(0, world.Count<Component2>());
     }
+
     [Fact]
     public void SerializesAndDeserializes_OnMatchingProfile() {
       CreateNormalEntities();
@@ -103,7 +91,16 @@ namespace ManulECS.Tests {
 
       Assert.Equal(2, world.EntityCount);
       Assert.Equal(2, world.Count<ProfileComponent1>());
+      Assert.Equal(1, world.Count<Component1>());
       Assert.Equal(1, world.Count<ProfileComponent2>());
+    }
+
+    [Fact]
+    public void ThrowsException_OnConflictingProfiles() {
+      world.Handle()
+        .Assign(new ProfileComponent1 { })
+        .Assign(new ProfileComponent3 { });
+      Assert.Throws<Exception>(() => world.Serialize("test-profile"));
     }
 
     [Fact]
@@ -120,37 +117,33 @@ namespace ManulECS.Tests {
 
     [Fact]
     public void KeepsEntityReferences() {
-      CreateEntitiesWithReferencedComponents();
-      int index = 0;
-      foreach (var e in world.Entities) {
-        if (index % 2 != 0) {
-          world.Remove(e);
-        }
-        index++;
-      }
-      index = 0;
-      CreateEntitiesWithReferencedComponents();
-      foreach (var e in world.Entities) {
-        if (index % 2 == 0) {
-          world.Remove(e);
-        }
-        index++;
-      }
+      var e1 = world.Handle().Assign(new Component1 { });
+      var e2 = world.Handle().Assign(new ComponentWithReference1 { entity = e1 });
+      world.Handle()
+        .Assign(new ComponentWithReference1 { entity = e1 })
+        .Assign(new ComponentWithReference2 { entity = e2 });
 
       var json = world.Serialize();
       world.Clear();
-
+      world.Create();
       world.Deserialize(json);
+      Assert.Equal(4, world.EntityCount);
 
+      var list = new List<Entity>();
       foreach (var e in world.View<ComponentWithReference1>()) {
-        ref var c = ref world.Get<ComponentWithReference1>(e);
-        Assert.True(world.Has<Component1>(c.entity));
+        list.Add(e);
       }
-
       foreach (var e in world.View<ComponentWithReference2>()) {
-        ref var c = ref world.Get<ComponentWithReference2>(e);
-        Assert.True(world.Has<Component2>(c.entity));
+        list.Add(e);
       }
+      Assert.Contains(new Entity(2, 0), list);
+      Assert.Contains(new Entity(3, 0), list);
+      var comp = world.Get<ComponentWithReference1>(new Entity(2, 0));
+      var comp2 = world.Get<ComponentWithReference1>(new Entity(3, 0));
+      var comp3 = world.Get<ComponentWithReference2>(new Entity(3, 0));
+      Assert.Equal(new Entity(1, 0), comp.entity);
+      Assert.Equal(new Entity(1, 0), comp2.entity);
+      Assert.Equal(new Entity(2, 0), comp3.entity);
     }
   }
 }

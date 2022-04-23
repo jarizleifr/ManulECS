@@ -9,7 +9,7 @@ namespace ManulECS {
     public const uint NULL_ID = 0xFFFFFF;
 
     [JsonProperty("uuid")]
-    private readonly uint value;
+    private readonly uint value = NULL_ID;
 
     internal uint Id {
       [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -23,7 +23,7 @@ namespace ManulECS {
     }
 
     [JsonConstructor]
-    internal Entity(uint value) => this.value = value;
+    internal Entity(uint uuid) => value = uuid;
 
     internal void Deconstruct(out uint id, out byte version) {
       id = Id; version = Version;
@@ -33,6 +33,8 @@ namespace ManulECS {
 
     public static bool operator ==(Entity left, Entity right) => left.Equals(right);
     public static bool operator !=(Entity left, Entity right) => !left.Equals(right);
+
+    public override string ToString() => $"{Id}:{Version}";
 
     public override bool Equals(object obj) =>
       obj is Entity entity && Equals(entity);

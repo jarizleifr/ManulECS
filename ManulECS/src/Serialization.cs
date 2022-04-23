@@ -26,8 +26,15 @@ namespace ManulECS {
     internal EntityPair[] EntityRemap { get; init; }
     public override bool CanWrite => false;
     public override void WriteJson(JsonWriter _w, Entity _v, JsonSerializer _s) { }
-    public override Entity ReadJson(JsonReader _r, Type _t, Entity entity, bool _b, JsonSerializer _s) =>
-      EntityRemap.Single(e => e.Old == entity).Created;
+    public override Entity ReadJson(JsonReader reader, Type _t, Entity _e, bool _b, JsonSerializer _s) {
+      var entity = JToken.Load(reader).ToObject<Entity>();
+      foreach (var (Old, Created) in EntityRemap) {
+        if (Old == entity) {
+          return Created;
+        }
+      }
+      return entity;
+    }
   }
 
   internal sealed class WorldSerializer {
@@ -70,22 +77,30 @@ namespace ManulECS {
       bool TrySerializeEntity(Entity entity, out JObject serialized) {
         serialized = default;
         var componentArray = new JArray();
+        string foundProfile = null;
         foreach (var idx in world.EntityKey(entity)) {
           var component = world.pools.PoolByKeyIndex(idx).Get(entity);
           if (!DiscardComponent(component)) {
-            if (DiscardEntity(component) || !MatchesProfile(component)) {
+            if (DiscardEntity(component)) {
               return false;
+            }
+            var componentProfile = GetProfile(component);
+            if (foundProfile == null) {
+              foundProfile = componentProfile;
+            } else if (componentProfile != null && foundProfile != componentProfile) {
+              throw new Exception("Entity has components belonging to different serialization profiles!");
             }
             componentArray.Add(JObject.FromObject(component, serializer));
           }
         }
-        if (componentArray.Any()) {
+        if (profile == foundProfile && componentArray.Any()) {
           serialized = JObject.FromObject(entity);
           serialized.Add(componentsName, componentArray);
           return true;
         }
         return false;
 
+        string GetProfile(object obj) => GetAttribute(obj)?.Profile;
         bool DiscardComponent(object obj) => GetAttribute(obj)?.Omit == Omit.Component;
         bool DiscardEntity(object obj) => GetAttribute(obj)?.Omit == Omit.Entity;
       }
@@ -115,9 +130,9 @@ namespace ManulECS {
             object component;
             try {
               component = token.ToObject<object>(serializer);
-            } catch (Exception e) {
+            } catch {
               // If errors, just skip the component
-              Console.WriteLine(e);
+              Console.WriteLine($"Component failed to deserialize: {token}");
               continue;
             }
 

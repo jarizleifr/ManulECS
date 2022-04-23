@@ -13,6 +13,9 @@ namespace ManulECS.Tests {
   [ECSSerialize("test-profile")]
   public struct ProfileComponent2 : IComponent { }
 
+  [ECSSerialize("test-profile-2")]
+  public struct ProfileComponent3 : IComponent { }
+
   [ECSSerialize(Omit.Component)]
   public struct DiscardComponent : IComponent { }
 
@@ -38,6 +41,7 @@ namespace ManulECS.Tests {
         .Declare<Tag>()
         .Declare<ProfileComponent1>()
         .Declare<ProfileComponent2>()
+        .Declare<ProfileComponent3>()
         .Declare<DiscardComponent>()
         .Declare<DiscardEntity>()
         .Declare<ComponentWithReference1>()
