@@ -4,7 +4,7 @@ An Entity-Component-System and a simple shared resource manager for C#, inspired
 
 I wrote a library called ManulEC in 2019 for my roguelike game to provide simple runtime composition similar to Unity, but it had obvious flaws and performance issues. Thus, a need for ManulECS had arisen and I decided to write a new library from scratch, using structs and sparse sets.
 
-# Features
+## Features
 
 - Focus on simplicity
   - ManulECS provides only the core functionality of composition and iteration.
@@ -15,111 +15,111 @@ I wrote a library called ManulEC in 2019 for my roguelike game to provide simple
 - Declarative, control internals by providing attributes to components/resources
 - Serialization powered by Json.NET
 
-# Overview
+## Overview
 
-## World
+### World
 
-The ManulECS entity registry is called a 'World'. It is self-contained, and you can have multiple worlds with different sets of components.
+The ManulECS entity registry is called a `World`. It is self-contained, and we can have multiple worlds with different sets of components.
 
-```
-var world = new World();  // Create a new entity registry.
-```
-
-## Entity
-
-Entity objects
-
-```
-var entity = world.Create();  // Create a new entity
-world.Remove(entity);         // Remove the entity, clearing all components in the process.
+```csharp
+var world = new World(); // Create a new entity registry.
 ```
 
-## Components and Tags
+### Entity
+
+Entities are simple 4 byte structs, representing an internal id and a version number. We don't really need to concern ourselves with either, so practically entities are just values, used as-is. 
+
+```csharp
+var entity = world.Create(); // Create a new entity
+world.Remove(entity);        // Remove the entity, clearing all components in the process.
+```
+
+### Components and Tags
 
 There are two kinds of things assignable to entities, Components and Tags. They are specified by using marker interfaces `IComponent` and `ITag`. These are only used for method constraints to give some useful static typing, so we're not unnecessarily boxing our structs. Component pools are setup automatically on first use, so there's no need to declare them beforehand.
 
 Components are simple data structs.
 
-```
+```csharp
 public struct Pos : IComponent {
   public int x;
   public int y;
 }
 ```
 
-Tags don't contain any data. They're like a typed flag that you can set on an entity.
+Tags don't contain any data. They're like a typed flag that we can set on an entity.
 
-```
+```csharp
 public struct IsPlayer : ITag { }
 ```
 
 Easiest way to assign new components to entities is to use field initializers. Assign will only assign component if not already found on the entity, Patch will replace the existing component.
 
-```
+```csharp
 world.Assign(entity, new Pos { x = 0, y = 0 }); // Will not overwrite
 world.Patch(entity, new Pos { x = 1, y = 1 });  // Will overwrite
 ```
 
-Tags have no replace function, as there's nothing to replace. Otherwise usage is similar, just that the data is omitted.
+Tags have no replace function, as there's nothing to replace. Otherwise usage is similar, albeit with the Tag method.
 
-```
+```csharp
 world.Tag<IsPlayer>(entity);
 ```
 
-You can remove components one by one, or clear all components of type T from all entities. Components and Tags are removed/cleared the same way.
+We can remove components one by one, or clear all components of type T from all entities. Components and Tags are removed/cleared the same way.
 
-```
+```csharp
 world.Remove<Component>(entity);  // Remove a component from a single entity
 world.Remove<Tag>(entity);        // Remove a tag from a single entity
 world.Clear<Component>();         // Clear all components of type
 world.Clear<Tag>();               // Clear all tags of type
 ```
 
-## Entity handles
+### Entity handles
 
-You can also create an entity handle to easily add multiple components on an entity. Entity handles can implicitly convert to entities.
+We can also create an entity handle to easily add multiple components on an entity. Entity handles can implicitly convert to entities.
 
-```
+```csharp
 var entityHandle = world.Handle()
   .Assign(new Component1 { })
   .Tag<SomeTag>()
   .Patch(new Component2 { });
 
-// This works, because EntityHandle implicitly converts to Entity.
-world.Remove(entityHandle); 
+// This works as well, because EntityHandle implicitly converts to an Entity.
+world.Remove(entityHandle);
 ```
 
-You can also wrap existing entities with a handle.
+We can also wrap existing entities with a handle.
 
-```
+```csharp
 world.Handle(entity)
   .Assign(new Component 1 { })
   .Patch(new Component2 { })
   .Remove<SomeTag>();
 ```
 
-## Resource
+### Resources
 
 Resources are classes that exist outside the sphere of entities. Resources are serialized just like entities, making them a good choice for complex data that needs to be persisted in a save game.
 
 Resources are natural singletons. Examples of objects that make good candidates for resources could be the current level in a game, or a clock, that controls whether it's day or night in the game.
 
-```
+```csharp
 var level = CreateLevel();
 world.SetResource(level);
 ```
 
-```
+```csharp
 var level = world.GetResource<Level>();
 ```
 
-## Systems
+### Systems
 
-ManulECS is not opinionated on how to build systems. Instead, ManulECS provides a View of Entities that you can iterate through with a foreach loop. Views are automatically updated on iteration if the related component pool has been modified.
+ManulECS is not opinionated on how to build systems. Instead, ManulECS provides a View of Entities that we can iterate through with a foreach loop. Views are automatically updated on iteration if the related component pool has been modified.
 
-You can use Pools<T...> method to improve performance by providing reusable component pool to read from.
+We can use Pools<T...> method to improve performance by providing reusable component pool to read from.
 
-```
+```csharp
 public static void MoveSystem(World world) {
   var (positions, velocities) = world.Pools<Position, Velocity>();
   foreach (var e in world.View<Position, Velocity>()) {
@@ -131,19 +131,19 @@ public static void MoveSystem(World world) {
 }
 ```
 
-Tags are handled by views as well! You can use Tags to easily filter out results.
+Tags are handled by views as well! We can use Tags to easily filter out results.
 
-```
+```csharp
 foreach (var e in world.View<Position, Velocity, SomeInterestingTag>()) {
   ...
 }
 ```
 
-## Serialization
+### Serialization
 
-You can control what components should be serialized by attributes. This is opt-out, by default everything is included. This is handy for omitting non-gameplay entities from save games, like particle effects.
+We can control what components should be serialized by attributes. This is opt-out, by default everything is included. This is handy for omitting non-gameplay entities from save games, like particle effects.
 
-```
+```csharp
 [ECSSerialize(Omit.Component)]
 public struct IntentionMove : IComponent { }  // This component is never serialized
 
@@ -151,18 +151,20 @@ public struct IntentionMove : IComponent { }  // This component is never seriali
 public struct VisualEffect : IComponent { }   // The entire entity owning this component is never serialized
 ```
 
-ManulECS also features a concept of serialization profiles, which you declare on component and resource basis. Always affects the entire entity.
+ManulECS also features a concept of serialization profiles, which we declare on component and resource basis. Always affects the entire entity.
 
-```
-public struct Monster : IComponent { }  // The entity will only be serialized on 'world.Serialize();'
+```csharp
+// The entity will only be serialized on 'world.Serialize();'
+public struct Monster : IComponent { }
 
+// The entity will only be serialized on 'world.Serialize("global");'
 [ECSSerialize("global")]   
-public struct Player : IComponent { }   // The entity will only be serialized on 'world.Serialize("global");'
+public struct Player : IComponent { }
 ```
 
-You can use serialization profiles on resources as well. Note that Omit does nothing when used on resources.
+We can use serialization profiles on resources as well. Note that Omit does nothing when used on resources.
 
-```
+```csharp
 [ECSSerialize("level")]
 public class Level {
   ...
@@ -171,35 +173,35 @@ public class Level {
 
 Serialization uses the excellent Json.NET library. 
 
-`world.Serialize` takes all the entities and resources without profiles set and dumps it as a JSON string, which you can just save to a file.
+`world.Serialize` takes all the entities and resources without profiles set and dumps it as a JSON string, which we can just save to a file.
 
-```
+```csharp
 var json = world.Serialize();           // Default serialization
 File.WriteAllText("save.json", json);
 ```
 
-Alternatively, you can provide a serialization profile, which will serialize only matching entities and resources.
+Alternatively, we can provide a serialization profile, which will serialize only matching entities and resources.
 
-```
+```csharp
 var json = world.Serialize("global");   // Serialize only stuff set to "global" profile
 File.WriteAllText("global.json", json);
 ```
 
-`world.Deserialize` works incrementally, so you can combine multiple sets of saved data in a single world.
+`world.Deserialize` works incrementally, so we can combine multiple sets of saved data in a single world. An example use-case would be backtracking, where we want to combine global data with some level-specific data on level transitions 
 
-```
+```csharp
 world.Deserialize(File.ReadAllText("global.json"));
 world.Deserialize(File.ReadAllText("level.json"));
 ```
 
-# Benchmarks
+## Benchmarks
 
 I've included my testing benchmarks in ManulECS.Benchmark project, using the BenchmarkDotNet library.
 
 Benchmarks were run on Windows 10, .NET 6.0.4 with:
 Intel Core i5-8600K CPU 3.60GHz (Coffee Lake), 1 CPU, 6 logical and 6 physical cores
 
-## Creation and removal
+### Creation and removal
 
 We start reaching the multi-ms range at creating/removing 100000 entities per frame, which on its own seems like a bit extreme use case. We could shave off about 0.500ms by having to declare components beforehand, in which case we could omit some checks, but I find the performance hit to be justified in this case, as it makes code simpler and easier to maintain. 
 
@@ -223,7 +225,7 @@ Creating tags is a bit faster than creating components, but they're about the sa
 |        Remove1TagFromEntities | 100000 | 1,973.3 μs | 19.91 μs | 18.62 μs |
 |        Remove2TagFromEntities | 100000 | 4,028.0 μs | 42.75 μs | 39.98 μs |
 
-## Iterating views
+### Iterating views
 
 For components, the update functions are simple move operations with an x/x,y transform applied on x/x,y coordinates.
 
