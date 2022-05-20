@@ -5,22 +5,27 @@ using BenchmarkDotNet.Engines;
 namespace ManulECS.Benchmark {
   [MemoryDiagnoser]
   [SimpleJob(RunStrategy.Throughput, invocationCount: 100)]
-  public class RemoveEntity : BaseBenchmark {
+  public class RemoveEntity {
+    private World world;
+    private readonly List<Entity> entities = new();
+
     [Params(100000)]
     public int N;
 
-    private readonly List<Entity> entities = new();
+    [GlobalSetup]
+    public void GlobalSetup() => world = new World();
 
     [IterationSetup]
     public void Setup() {
       for (int i = 0; i < N * 100; i++) {
         entities.Add(
           world.Handle()
-            .Assign(new Pos { }).Assign(new Move { })
-            .Tag<Tag1>().Tag<Tag2>()
+          .Assign(new Pos { }).Assign(new Move { })
+          .Tag<Tag1>().Tag<Tag2>()
         );
       }
     }
+
     [IterationCleanup]
     public void Cleanup() {
       entities.Clear();

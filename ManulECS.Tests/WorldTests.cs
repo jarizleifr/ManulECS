@@ -4,9 +4,11 @@ using System.Linq;
 using Xunit;
 
 namespace ManulECS.Tests {
-  [Collection("World")]
-  public class WorldTests : TestContext {
+  public class WorldTests {
+    private World world;
+
     public WorldTests() {
+      world = new World();
       for (int i = 0; i < 10; i++) {
         world.Handle().Assign(new Component1 { });
         world.Handle().Assign(new Component1 { }).Assign(new Component2 { });
@@ -14,10 +16,8 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void Creates_MultipleWorlds() {
+      public void Creates_MultipleWorlds() {
       var otherWorld = new World();
-      otherWorld.Declare<Component1>().Declare<Component2>();
-
       for (int i = 0; i < 10; i++) {
         otherWorld.Handle().Assign(new Component1 { });
         otherWorld.Handle().Assign(new Component1 { }).Assign(new Component2 { });
@@ -37,11 +37,6 @@ namespace ManulECS.Tests {
     public void CreatesComponentPool() {
       var pool = world.Pool<Component1>();
       Assert.IsType<Pool<Component1>>(pool);
-    }
-
-    [Fact]
-    public void ThrowsException_OnDeclare_WhenAlreadyDeclaredComponent() {
-      Assert.Throws<Exception>(() => world.Declare<Component1>());
     }
 
     [Fact]
@@ -94,7 +89,6 @@ namespace ManulECS.Tests {
       Assert.Contains(0, list);
       Assert.Contains(1, list);
       Assert.Contains(2, list);
-      TypeIndex.Reset();
     }
   }
 }

@@ -1,8 +1,10 @@
 using Xunit;
 
 namespace ManulECS.Tests {
-  [Collection("World")]
-  public class EntityTests : TestContext {
+  public class EntityTests {
+    private World world;
+    public EntityTests() => world = new World();
+
     [Fact]
     public void CreatesCorrectValues() {
       var entity = new Entity(666, 42);

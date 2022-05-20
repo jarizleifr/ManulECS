@@ -1,4 +1,5 @@
 .vscode
+.projectile
 BenchmarkDotNet.Artifacts
 bin
 obj

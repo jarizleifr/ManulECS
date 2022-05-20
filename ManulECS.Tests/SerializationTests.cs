@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using Xunit;
 
 namespace ManulECS.Tests {
-  [Collection("World")]
-  public class SerializationTests : TestContext {
+  public class SerializationTests {
+    private World world;
+
+    public SerializationTests() => world = new World();
+
     private void CreateNormalEntities() {
       var e1 = world.Create();
       world.Assign(e1, new Component1 { });

@@ -76,13 +76,6 @@ namespace ManulECS {
     /// <summary>Gets the count of alive entities.</summary>
     public int EntityCount => Entities.Count();
 
-    /// <summary>Declare a component/tag of type T for use.</summary>
-    /// <returns>The calling World object, for chaining.</returns>
-    public World Declare<T>() where T : struct, IBaseComponent {
-      pools.Register<T>();
-      return this;
-    }
-
     /// <summary>Gets the count of components of type T.</summary>
     public int Count<T>() where T : struct, IBaseComponent =>
       UntypedPool<T>().Count;

@@ -1,10 +1,11 @@
-using System.Linq;
 using Xunit;
 
 namespace ManulECS.Tests {
-  [Collection("World")]
-  public class ViewTests : TestContext {
+  public class ViewTests {
+    private World world;
+
     public ViewTests() {
+      world = new World();
       for (int i = 0; i < 10; i++) {
         world.Handle().Assign(new Component1 { });
         world.Handle().Assign(new Component1 { }).Assign(new Component2 { });

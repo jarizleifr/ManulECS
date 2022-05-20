@@ -4,9 +4,14 @@ using BenchmarkDotNet.Engines;
 namespace ManulECS.Benchmark {
   [MemoryDiagnoser]
   [SimpleJob(RunStrategy.Throughput, invocationCount: 80)]
-  public class CreateEntity : BaseBenchmark {
+  public class CreateEntity {
+    private World world;
+
     [Params(100000)]
     public int N;
+
+    [GlobalSetup]
+    public void GlobalSetup() => world = new World();
 
     [IterationCleanup]
     public void Cleanup() => world.Clear();
@@ -17,12 +22,16 @@ namespace ManulECS.Benchmark {
         world.Create();
       }
     }
+
     [Benchmark]
     public void CreateEntitiesWith1Component() => CreateWith1Component<Pos>();
+
     [Benchmark]
     public void CreateEntitiesWith2Components() => CreateWith2Components<Pos, Move>();
+
     [Benchmark]
     public void CreateEntitiesWith1Tag() => CreateWith1Tag<Tag1>();
+
     [Benchmark]
     public void CreateEntitiesWith2Tags() => CreateWith2Tags<Tag1, Tag2>();
 

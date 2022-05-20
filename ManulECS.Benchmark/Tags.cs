@@ -4,9 +4,14 @@ using BenchmarkDotNet.Engines;
 namespace ManulECS.Benchmark {
   [MemoryDiagnoser]
   [SimpleJob(RunStrategy.Throughput, invocationCount: 10000)]
-  public class Tags : BaseBenchmark {
+  public class Tags {
+    private World world;
+
     [Params(100000)]
     public int N;
+
+    [GlobalSetup]
+    public void GlobalSetup() => world = new World();
 
     [IterationSetup]
     public void Setup() {

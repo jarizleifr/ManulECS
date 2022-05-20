@@ -5,11 +5,15 @@ using BenchmarkDotNet.Engines;
 namespace ManulECS.Benchmark {
   [MemoryDiagnoser]
   [SimpleJob(RunStrategy.Throughput, invocationCount: 1000)]
-  public class Components : BaseBenchmark {
+  public class Components {
+    private World world;
+    private readonly Random rng = new(0);
+
     [Params(100000)]
     public int N;
 
-    private readonly Random rng = new(0);
+    [GlobalSetup]
+    public void GlobalSetup() => world = new World();
 
     [IterationSetup]
     public void Setup() {

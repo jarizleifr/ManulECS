@@ -1,40 +1,31 @@
-using System;
-using System.Collections.Generic;
-using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace ManulECS {
   internal static class TypeIndex {
-    internal const int MAX_INDEX = byte.MaxValue;
+    private const int MAX_INDEX = int.MaxValue;
 
     private static class Index<T> where T : struct, IBaseComponent {
-      internal static byte value = byte.MaxValue;
-      internal static void Reset() => value = byte.MaxValue;
+      internal static int value = MAX_INDEX;
     }
-    private static byte next = 0;
-    private readonly static List<Type> types = new();
 
-    internal static byte Get<T>() where T : struct, IBaseComponent =>
-      Index<T>.value;
+    private static int next = -1;
 
-    internal static byte Create<T>() where T : struct, IBaseComponent {
-      var type = typeof(T);
-      if (!types.Contains(typeof(T))) {
-        types.Add(type);
-        Index<T>.value = next++;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static int Get<T>() where T : struct, IBaseComponent => Index<T>.value;
+
+    internal static int Create<T>() where T : struct, IBaseComponent {
+      /* Thread-safety isn't a huge concern here, especially if using only a single World object,
+       * but testing frameworks like Xunit like to run tests in parallel, in which case multiple
+       * threads might try to register a component with the same index.
+       * 
+       * This safeguard makes sure indices are created properly in a multithreaded context.
+       */
+      if (Interlocked.CompareExchange(ref Index<T>.value, next + 1, MAX_INDEX) == MAX_INDEX) {
+        Interlocked.Increment(ref next);
       }
       return Index<T>.value;
     }
-
-    internal static void Reset() {
-      foreach (var type in types) {
-        var generic = typeof(Index<>).MakeGenericType(type);
-        var method = generic.GetMethod(
-          "Reset", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.InvokeMethod
-        );
-        method.Invoke(null, null);
-      }
-      next = 0;
-      types.Clear();
-    }
   }
 }
+

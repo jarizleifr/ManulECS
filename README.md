@@ -8,7 +8,7 @@ I wrote a library called ManulEC in 2019 for my roguelike game to provide simple
 
 - Focus on simplicity
   - ManulECS provides only the core functionality of composition and iteration.
-  - If you need system classes, events, parallelism, you'll need to write them yourself.
+  - If you need system classes, events, parallelism, you'll need to write wrappers for ManulECS yourself.
 - Data-driven, cache-coherent ECS, achieved with sparse sets of structs
 - Support for tag components without data
 - Support for non-entity resources
@@ -36,7 +36,7 @@ world.Remove(entity);         // Remove the entity, clearing all components in t
 
 ## Components and Tags
 
-There are two kinds of things assignable to entities, Components and Tags. They are specified by using marker interfaces `IComponent` and `ITag`. These are only used for method constraints to give some useful static typing, so we're not unnecessarily boxing our structs.
+There are two kinds of things assignable to entities, Components and Tags. They are specified by using marker interfaces `IComponent` and `ITag`. These are only used for method constraints to give some useful static typing, so we're not unnecessarily boxing our structs. Component pools are setup automatically on first use, so there's no need to declare them beforehand.
 
 Components are simple data structs.
 
@@ -51,19 +51,6 @@ Tags don't contain any data. They're like a typed flag that you can set on an en
 
 ```
 public struct IsPlayer : ITag { }
-```
-
-All Components/Tags need to be declared by the World object before they can be used. Trying to access an undeclared component will throw an exception.
-
-```
-world.Declare<Pos>();
-world.Declare<IsPlayer>();
-```
-
-Declare method returns the World object, so declarations can be chained. See the section on code generation for something extra, if this feels too profuse.
-
-```
-world.Declare<Pos>().Declare<IsPlayer>();
 ```
 
 Easiest way to assign new components to entities is to use field initializers. Assign will only assign component if not already found on the entity, Patch will replace the existing component.
@@ -205,7 +192,6 @@ world.Deserialize(File.ReadAllText("global.json"));
 world.Deserialize(File.ReadAllText("level.json"));
 ```
 
-
 # Benchmarks
 
 I've included my testing benchmarks in ManulECS.Benchmark project, using the BenchmarkDotNet library.
@@ -215,65 +201,46 @@ Intel Core i5-8600K CPU 3.60GHz (Coffee Lake), 1 CPU, 6 logical and 6 physical c
 
 ## Creation and removal
 
-We start reaching the multi-ms range at creating/removing 100000 entities per frame, which on its own seems like a bit extreme use case.
+We start reaching the multi-ms range at creating/removing 100000 entities per frame, which on its own seems like a bit extreme use case. We could shave off about 0.500ms by having to declare components beforehand, in which case we could omit some checks, but I find the performance hit to be justified in this case, as it makes code simpler and easier to maintain. 
 
-|                        Method |      N |     Mean |     Error |    StdDev |    Gen 0 |    Gen 1 |    Gen 2 | Allocated |
-|------------------------------ |------- |---------:|----------:|----------:|---------:|---------:|---------:|----------:|
-|                CreateEntities | 100000 | 2.025 ms | 0.0220 ms | 0.0206 ms |  50.0000 |  50.0000 |  50.0000 |      4 MB |
-|  CreateEntitiesWith1Component | 100000 | 4.732 ms | 0.0458 ms | 0.0429 ms |  75.0000 |  75.0000 |  75.0000 |      7 MB |
-| CreateEntitiesWith2Components | 100000 | 7.471 ms | 0.0895 ms | 0.0837 ms | 100.0000 | 100.0000 | 100.0000 |     10 MB |
-|        CreateEntitiesWith1Tag | 100000 | 3.756 ms | 0.0669 ms | 0.0626 ms |  62.5000 |  62.5000 |  62.5000 |      6 MB |
-|       CreateEntitiesWith2Tags | 100000 | 5.922 ms | 0.0365 ms | 0.0324 ms |  87.5000 |  87.5000 |  87.5000 |      7 MB |
+Tags do still have some overhead, albeit less than components.
+
+|                        Method |      N |     Mean |     Error |    StdDev | Allocated |
+|------------------------------ |------- |---------:|----------:|----------:|----------:|
+|                CreateEntities | 100000 | 2.000 ms | 0.0359 ms | 0.0336 ms |      4 MB |
+|  CreateEntitiesWith1Component | 100000 | 5.216 ms | 0.0560 ms | 0.0523 ms |      7 MB |
+| CreateEntitiesWith2Components | 100000 | 8.506 ms | 0.0612 ms | 0.0573 ms |     10 MB |
+|        CreateEntitiesWith1Tag | 100000 | 4.259 ms | 0.0258 ms | 0.0215 ms |      6 MB |
+|       CreateEntitiesWith2Tags | 100000 | 6.874 ms | 0.0396 ms | 0.0370 ms |      7 MB |
 
 Creating tags is a bit faster than creating components, but they're about the same when removing. Fastest way to get rid of components, is to remove the entire entity holding them.
 
 |                        Method |      N |       Mean |    Error |   StdDev |
 |------------------------------ |------- |-----------:|---------:|---------:|
-|                RemoveEntities | 100000 |   649.8 us | 10.06 us |  9.41 us |
-|  Remove1ComponentFromEntities | 100000 | 1,211.8 us | 11.55 us | 10.80 us |
-| Remove2ComponentsFromEntities | 100000 | 2,445.5 us | 19.32 us | 17.13 us |
-|        Remove1TagFromEntities | 100000 | 1,185.9 us | 17.34 us | 16.22 us |
-|        Remove2TagFromEntities | 100000 | 2,390.0 us | 10.53 us |  8.79 us |
+|                RemoveEntities | 100000 |   615.6 μs |  7.40 μs |  6.92 μs |
+|  Remove1ComponentFromEntities | 100000 | 1,883.1 μs | 18.33 μs | 17.15 μs |
+| Remove2ComponentsFromEntities | 100000 | 3,989.2 μs | 47.58 μs | 42.18 μs |
+|        Remove1TagFromEntities | 100000 | 1,973.3 μs | 19.91 μs | 18.62 μs |
+|        Remove2TagFromEntities | 100000 | 4,028.0 μs | 42.75 μs | 39.98 μs |
 
 ## Iterating views
 
 For components, the update functions are simple move operations with an x/x,y transform applied on x/x,y coordinates.
 
-The worst case scenario benchmark rebuilds the entity view on each iteration. There is currently no sorting mechanism, so iteration isn't as cache-friendly as I'd like, but it's _fast enough_, with the added bonus that we can use simple foreach loops instead of complex lambdas (no need to worry about closures) or creating system classes.
+The worst case scenario benchmark rebuilds the entity view on each iteration. There is currently no sorting mechanism, so iteration isn't as cache-friendly as I'd like, but it's _fast enough_ even with random access, with the added bonus that we can use simple foreach loops instead of complex lambdas (no need to worry about closures) or creating system classes.
 
-My previous benchmark for two component update was 465 us, so I'm pretty happy with the current performance.
+My previous benchmark for two component update was 465μs, so I'm pretty happy with the current performance.
 
 |                              Method |      N |     Mean |   Error |  StdDev |
 |------------------------------------ |------- |---------:|--------:|--------:|
-|                    Update1Component | 100000 | 120.2 us | 1.29 us | 1.20 us |
-|                   Update2Components | 100000 | 251.3 us | 2.36 us | 2.21 us |
-| Update2Components_WorstCaseScenario | 100000 | 686.6 us | 3.01 us | 2.67 us |
+|                    Update1Component | 100000 | 115.8 μs | 0.89 μs | 0.83 μs |
+|                   Update2Components | 100000 | 242.1 μs | 0.87 μs | 0.77 μs |
+| Update2Components_WorstCaseScenario | 100000 | 694.2 μs | 5.94 μs | 5.56 μs |
 
 For tags, there's virtually no difference between looping through 1 or 2 tags.
 
 |    Method |      N |     Mean |    Error |   StdDev |
 |---------- |------- |---------:|---------:|---------:|
-|  Loop1Tag | 100000 | 25.32 us | 0.169 us | 0.158 us |
-| Loop2Tags | 100000 | 25.24 us | 0.166 us | 0.147 us |
-
-# Extra - Code generation
-
-I've included a Roslyn generator, which can auto-generate an extension method for you to declare all structs that have the `IComponent` or `ITag` marker interface. It's a bit of a brute force solution, but it makes things a bit more maintainable, when you're still developing your components and things change often.
-
-This obviously won't work, if you're keen on having multiple worlds of different sets of components.
-
-Add the ManulECS.Generators project in your own .csproj file as an analyzer:
-
-```
-<ProjectReference Include="..\ManulECS\ManulECS.Generators\ManulECS.Generators.csproj">
-  <OutputItemType>Analyzer</OutputItemType>
-  <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-</ProjectReference>
-```
-
-Build your project and you should be good to go!
-
-```
-var world = new World();
-world.DeclareAll();
-```
+|  Loop1Tag | 100000 | 24.50 μs | 0.081 μs | 0.076 μs |
+| Loop2Tags | 100000 | 24.50 μs | 0.063 μs | 0.056 μs |
+ 

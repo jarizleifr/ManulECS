@@ -1,5 +1,3 @@
-using System;
-
 namespace ManulECS.Tests {
   public struct Component1 : IComponent { public uint value; }
   public struct Component2 : IComponent { public int value; }
@@ -27,31 +25,5 @@ namespace ManulECS.Tests {
   }
   public struct ComponentWithReference2 : IComponent {
     public Entity entity;
-  }
-
-  public abstract class TestContext : IDisposable {
-    protected World world;
-
-    public TestContext() {
-      world = new World()
-        .Declare<Component1>()
-        .Declare<Component2>()
-        .Declare<Component3>()
-        .Declare<Component4>()
-        .Declare<Tag>()
-        .Declare<ProfileComponent1>()
-        .Declare<ProfileComponent2>()
-        .Declare<ProfileComponent3>()
-        .Declare<DiscardComponent>()
-        .Declare<DiscardEntity>()
-        .Declare<ComponentWithReference1>()
-        .Declare<ComponentWithReference2>();
-    }
-
-    public void Dispose() {
-      world = null;
-      TypeIndex.Reset();
-      GC.SuppressFinalize(this);
-    }
   }
 }
