@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Xunit;
 
 namespace ManulECS.Tests {
@@ -37,12 +38,28 @@ namespace ManulECS.Tests {
       world.Assign(e2, new DiscardEntity { });
     }
 
+    private byte[] Serialize(string profile = null) {
+      var serializer = new JsonWorldSerializer() { Profile = profile };
+      using var stream = new MemoryStream();
+      serializer.Write(stream, world);
+      return stream.GetBuffer();
+    }
+
+    private void Deserialize(byte[] buffer) {
+      var serializer = new JsonWorldSerializer();
+      using var stream = new MemoryStream(buffer);
+      serializer.Read(stream, world);
+    }
+
     [Fact]
     public void WontSerialize_EmptyEntities() {
-      for (int i = 0; i < 10; i++) world.Create();
-      var json = world.Serialize();
+      for (int i = 0; i < 10; i++) {
+        world.Create();
+      }
+      var buffer = Serialize();
       world.Clear();
-      world.Deserialize(json);
+
+      Deserialize(buffer);
       Assert.Equal(0, world.EntityCount);
     }
 
@@ -50,10 +67,10 @@ namespace ManulECS.Tests {
     public void SerializesAndDeserializes_Entities() {
       CreateNormalEntities();
       CreateProfileEntities();
-      var json = world.Serialize();
+      var buffer = Serialize();
       world.Clear();
-      world.Deserialize(json);
 
+      Deserialize(buffer);
       Assert.Equal(2, world.EntityCount);
       Assert.Equal(2, world.Pool<Component1>().Count);
       Assert.Equal(1, world.Pool<Component2>().Count);
@@ -62,10 +79,10 @@ namespace ManulECS.Tests {
     [Fact]
     public void Omits_OnOmitAttribute() {
       CreateDiscardingEntities();
-      var json = world.Serialize();
+      var buffer = Serialize();
       world.Clear();
-      world.Deserialize(json);
 
+      Deserialize(buffer);
       Assert.Equal(1, world.EntityCount);
       Assert.Equal(1, world.Count<Component1>());
       Assert.Equal(0, world.Count<DiscardEntity>());
@@ -75,10 +92,10 @@ namespace ManulECS.Tests {
     [Fact]
     public void WontSerialize_OnClashingProfile() {
       CreateNormalEntities();
-      var json = world.Serialize("test-profile");
+      var buffer = Serialize("test-profile");
       world.Clear();
-      world.Deserialize(json);
 
+      Deserialize(buffer);
       Assert.Equal(0, world.EntityCount);
       Assert.Equal(0, world.Count<Component1>());
       Assert.Equal(0, world.Count<Component2>());
@@ -88,10 +105,10 @@ namespace ManulECS.Tests {
     public void SerializesAndDeserializes_OnMatchingProfile() {
       CreateNormalEntities();
       CreateProfileEntities();
-      var json = world.Serialize("test-profile");
+      var buffer = Serialize("test-profile");
       world.Clear();
-      world.Deserialize(json);
 
+      Deserialize(buffer);
       Assert.Equal(2, world.EntityCount);
       Assert.Equal(2, world.Count<ProfileComponent1>());
       Assert.Equal(1, world.Count<Component1>());
@@ -103,16 +120,16 @@ namespace ManulECS.Tests {
       world.Handle()
         .Assign(new ProfileComponent1 { })
         .Assign(new ProfileComponent3 { });
-      Assert.Throws<Exception>(() => world.Serialize("test-profile"));
+      Assert.Throws<Exception>(() => Serialize("test-profile"));
     }
 
     [Fact]
     public void WontSerialize_OnMissingProfile() {
       CreateProfileEntities();
-      var json = world.Serialize();
+      var buffer = Serialize();
       world.Clear();
-      world.Deserialize(json);
 
+      Deserialize(buffer);
       Assert.Equal(0, world.EntityCount);
       Assert.Equal(0, world.Count<ProfileComponent1>());
       Assert.Equal(0, world.Count<ProfileComponent2>());
@@ -126,10 +143,11 @@ namespace ManulECS.Tests {
         .Assign(new ComponentWithReference1 { entity = e1 })
         .Assign(new ComponentWithReference2 { entity = e2 });
 
-      var json = world.Serialize();
+      var buffer = Serialize();
       world.Clear();
       world.Create();
-      world.Deserialize(json);
+
+      Deserialize(buffer);
       Assert.Equal(4, world.EntityCount);
 
       var list = new List<Entity>();

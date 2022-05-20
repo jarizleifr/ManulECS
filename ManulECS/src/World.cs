@@ -13,13 +13,17 @@ namespace ManulECS {
     private Entity[] entities = new Entity[INITIAL_CAPACITY];
     private Key[] entityKeys = new Key[INITIAL_CAPACITY];
 
+    private readonly Dictionary<Type, object> resources = new();
+
     internal ref Key EntityKey(in Entity entity) => ref entityKeys[entity.Id];
 
     internal readonly PoolCollection pools = new();
     internal readonly ViewCache viewCache = new();
 
-    private readonly Dictionary<Type, object> resources = new();
     internal IEnumerable<object> Resources => resources.Values;
+    internal IEnumerable<Entity> Entities => nextId != 0
+      ? entities.Where((entity, index) => entity.Id == index)
+      : Enumerable.Empty<Entity>();
 
     /// <summary>Creates a new empty Entity.</summary>
     public Entity Create() {
@@ -183,20 +187,13 @@ namespace ManulECS {
 
     /// <summary>Assigns or replaces the resource of type T in registry.</summary>
     public void SetResource<T>(T resource) => resources[typeof(T)] = resource;
+
     /// <summary>Removes the resource of type T from the registry.</summary>
     public void ClearResource<T>() => resources.Remove(typeof(T));
 
-    /// <summary>Creates a json string from the registry, optionally with a profile</summary>
-    public string Serialize(string profile = null) => new WorldSerializer(this, profile).Create();
-    /// <summary>Applies the provided json on top of the existing registry</summary>
-    public void Deserialize(string json) => new WorldSerializer(this).Apply(json);
-
     internal void SetResource(Type type, object resource) => resources[type] = resource;
-    internal void ClearResource(Type type) => resources.Remove(type);
 
-    internal IEnumerable<Entity> Entities => nextId != 0
-      ? entities.Where((entity, index) => entity.Id == index)
-      : Enumerable.Empty<Entity>();
+    internal void ClearResource(Type type) => resources.Remove(type);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Key Key<T>() where T : struct, IBaseComponent =>

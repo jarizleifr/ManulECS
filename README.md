@@ -6,14 +6,23 @@ I wrote a library called ManulEC in 2019 for my roguelike game to provide simple
 
 ## Features
 
-- Focus on simplicity
-  - ManulECS provides only the core functionality of composition and iteration.
-  - If you need system classes, events, parallelism, you'll need to write wrappers for ManulECS yourself.
-- Data-driven, cache-coherent ECS, achieved with sparse sets of structs
-- Support for tag components without data
-- Support for non-entity resources
-- Declarative, control internals by providing attributes to components/resources
-- Serialization powered by Json.NET
+### Focus on simplicity
+
+Simplicity as in simple to understand, this has been a huge learning opportunity for myself and I've purposefully tried to keep things as clean as possible. There are bound to be more feature-rich and more performant ECS implementations out there, but my implementation does its job with just about 800 lines of code (not counting tests or blanks/comments).
+
+Out-of-the-box, there are no system classes to override, no code generation, no events, no parallelism. Just the core functionality for composition, iteration and serialization. If you want more exotic features, you can write your own wrappers around ManulECS.
+
+### Sparse Sets
+
+Under the hood, ManulECS uses sparse sets of structs to achieve data locality.
+
+### Components, Tags and Resources
+
+There's support for **Components** (regular structs), **Tags** (boolean flags) and **Resources** (classes outside the sphere of entities). 
+
+### Serialization
+
+Serialization has been written to be extendable, a serializer for JSON format has been included in the project.
 
 ## Overview
 
@@ -93,7 +102,7 @@ We can also wrap existing entities with a handle.
 
 ```csharp
 world.Handle(entity)
-  .Assign(new Component 1 { })
+  .Assign(new Component1 { })
   .Patch(new Component2 { })
   .Remove<SomeTag>();
 ```
@@ -134,9 +143,7 @@ public static void MoveSystem(World world) {
 Tags are handled by views as well! We can use Tags to easily filter out results.
 
 ```csharp
-foreach (var e in world.View<Position, Velocity, SomeInterestingTag>()) {
-  ...
-}
+foreach (var e in world.View<Position, Velocity, SomeInterestingTag>()) { }
 ```
 
 ### Serialization
@@ -154,10 +161,10 @@ public struct VisualEffect : IComponent { }   // The entire entity owning this c
 ManulECS also features a concept of serialization profiles, which we declare on component and resource basis. Always affects the entire entity.
 
 ```csharp
-// The entity will only be serialized on 'world.Serialize();'
+// The entity will only be serialized when no profile has been provided
 public struct Monster : IComponent { }
 
-// The entity will only be serialized on 'world.Serialize("global");'
+// The entity will only be serialized when "global" profile has been provided
 [ECSSerialize("global")]   
 public struct Player : IComponent { }
 ```
@@ -166,33 +173,55 @@ We can use serialization profiles on resources as well. Note that Omit does noth
 
 ```csharp
 [ECSSerialize("level")]
-public class Level {
-  ...
-}
+public class Level { }
 ```
 
-Serialization uses the excellent Json.NET library. 
+I've included an example `WorldSerializer`, which uses the excellent Json.NET library. I might move this to another assembly in the future, as an optional add-on, so there'd be no dependencies.
 
-`world.Serialize` takes all the entities and resources without profiles set and dumps it as a JSON string, which we can just save to a file.
+`WorldSerializer` abstract class exposes two public methods `Write` and `Read`, which can be used to serialize and deserialize world state accordingly.
+
+When not providing a serialization profile string, all resources and components that don't belong to any profiles will get serialized.
 
 ```csharp
-var json = world.Serialize();           // Default serialization
-File.WriteAllText("save.json", json);
+// Default serialization
+using var fileStream = new FileStream("path/to/some/file");
+var serializer = new JsonWorldSerializer();
+serializer.Write(fileStream, world);
 ```
 
 Alternatively, we can provide a serialization profile, which will serialize only matching entities and resources.
 
 ```csharp
-var json = world.Serialize("global");   // Serialize only stuff set to "global" profile
+// Serialize only stuff set to "global" profile
+serializer.Write(fileStream, world, "global");
+```
+
+`serializer.Read` works incrementally, so we can combine multiple sets of saved data in a single world. An example use-case would be backtracking, where we want to combine global data with some level-specific data on level transitions 
+
+```csharp
+using (var fs = new FileStream("globaldata.json")) {
+  var serializer = new JsonWorldSerializer { Profile = profile };
+  serializer.Read(fs, world);
+}
+using (var fs = new FileStream("leveldata.json")) {
+  var serializer = new JsonWorldSerializer();
+  serializer.Read(fs, world);
+}
+```
+
+For the included `JsonWorldSerializer`, I've created a couple static wrapper methods for easier handling of JSON strings.
+
+```csharp
+var json = JsonWorldSerializer.Serialize(world, "global");
 File.WriteAllText("global.json", json);
 ```
 
-`world.Deserialize` works incrementally, so we can combine multiple sets of saved data in a single world. An example use-case would be backtracking, where we want to combine global data with some level-specific data on level transitions 
-
 ```csharp
-world.Deserialize(File.ReadAllText("global.json"));
-world.Deserialize(File.ReadAllText("level.json"));
+var json = File.ReadAllText("global.json");
+JsonWorldSerializer.Deserialize(world, json);
 ```
+
+Serialization API is pretty rudimentary by design. Making wrappers for any particular use case is easy, and having access to the raw streams is useful, you can for example use MemoryStreams when doing tests and use FileStreams for actual program. You can even write straight to an entry in a Zip archive, if you want to compress your saves.
 
 ## Benchmarks
 
