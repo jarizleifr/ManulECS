@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace ManulECS {
+  /// <summary>Provides fast static type indexing for component types.</summary>
   internal static class TypeIndex {
     private const int MAX_INDEX = int.MaxValue;
 
@@ -9,7 +10,7 @@ namespace ManulECS {
       internal static int value = MAX_INDEX;
     }
 
-    private static int next = -1;
+    private static int nextIndex = -1;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static int Get<T>() where T : struct, IBaseComponent => Index<T>.value;
@@ -21,8 +22,8 @@ namespace ManulECS {
        * 
        * This safeguard makes sure indices are created properly in a multithreaded context.
        */
-      if (Interlocked.CompareExchange(ref Index<T>.value, next + 1, MAX_INDEX) == MAX_INDEX) {
-        Interlocked.Increment(ref next);
+      if (Interlocked.CompareExchange(ref Index<T>.value, nextIndex + 1, MAX_INDEX) == MAX_INDEX) {
+        Interlocked.Increment(ref nextIndex);
       }
       return Index<T>.value;
     }

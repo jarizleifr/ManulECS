@@ -7,7 +7,7 @@ namespace ManulECS {
     private T[] components;
     private uint[] mapping;
 
-    internal Pool(in Key key) => Key = key;
+    internal Pool(in Key key) : base(key, ECSSerializeAttribute.GetAttribute(typeof(T))) { }
 
     /// <summary>Get a ref of component. This WILL throw exception if not found.</summary>
     public ref T this[in Entity entity] {
@@ -36,6 +36,9 @@ namespace ManulECS {
       }
       OnUpdate?.Invoke();
     }
+
+    internal override void SetObject(in Entity entity, object component) =>
+      Set(entity, (T)component);
 
     internal override void Remove(in Entity entity) {
       var id = entity.Id;

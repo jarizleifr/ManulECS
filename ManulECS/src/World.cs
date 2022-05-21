@@ -9,21 +9,26 @@ namespace ManulECS {
     internal const int INITIAL_CAPACITY = 4;
     private uint destroyed = Entity.NULL_ID;
     private uint nextId = 0;
+    private uint count = 0;
 
     private Entity[] entities = new Entity[INITIAL_CAPACITY];
     private Key[] entityKeys = new Key[INITIAL_CAPACITY];
 
     private readonly Dictionary<Type, object> resources = new();
-
-    internal ref Key EntityKey(in Entity entity) => ref entityKeys[entity.Id];
-
     internal readonly PoolCollection pools = new();
     internal readonly ViewCache viewCache = new();
+
+    internal ref Key EntityKey(in Entity entity) => ref entityKeys[entity.Id];
+    internal Entity this[int index] => entities[index];
 
     internal IEnumerable<object> Resources => resources.Values;
     internal IEnumerable<Entity> Entities => nextId != 0
       ? entities.Where((entity, index) => entity.Id == index)
       : Enumerable.Empty<Entity>();
+
+    internal uint Capacity => nextId;
+    /// <summary>Gets the count of alive entities.</summary>
+    public int Count() => (int)count;
 
     /// <summary>Creates a new empty Entity.</summary>
     public Entity Create() {
@@ -40,6 +45,7 @@ namespace ManulECS {
         (entities[destroyed], entityKeys[destroyed]) = (entity, default);
         destroyed = id;
       }
+      count++;
       return entity;
     }
 
@@ -60,6 +66,7 @@ namespace ManulECS {
         var (id, version) = entity;
         (entities[id], key) = (new(destroyed, ++version), default);
         destroyed = id;
+        count--;
         return true;
       }
       return false;
@@ -71,14 +78,12 @@ namespace ManulECS {
       entityKeys = new Key[INITIAL_CAPACITY];
       destroyed = Entity.NULL_ID;
       nextId = 0;
+      count = 0;
 
       pools.Clear();
       resources.Clear();
       viewCache.Clear();
     }
-
-    /// <summary>Gets the count of alive entities.</summary>
-    public int EntityCount => Entities.Count();
 
     /// <summary>Gets the count of components of type T.</summary>
     public int Count<T>() where T : struct, IBaseComponent =>
@@ -191,9 +196,26 @@ namespace ManulECS {
     /// <summary>Removes the resource of type T from the registry.</summary>
     public void ClearResource<T>() => resources.Remove(typeof(T));
 
+    internal static bool IsTag(Type type) => typeof(ITag).IsAssignableFrom(type);
+    internal static bool IsComponent(Type type) => typeof(IComponent).IsAssignableFrom(type);
+
+    /// <summary>Assigns a Resource by its runtime type.</summary>
+    /// <remarks>Used only for internal deserialization.</remarks>
     internal void SetResource(Type type, object resource) => resources[type] = resource;
 
-    internal void ClearResource(Type type) => resources.Remove(type);
+    /// <summary>Assigns a boxed Component or Tag by its runtime type.</summary>
+    /// <remarks>Used only for internal deserialization.</remarks>
+    internal void AssignObject(in Entity entity, Type type, object component) {
+      if (IsAlive(entity)) {
+        var pool = pools.PoolByType(type);
+        var key = pool.Key;
+        ref var flags = ref EntityKey(entity);
+        if (!flags[key]) {
+          flags += key;
+          pool.SetObject(entity, component);
+        }
+      }
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Key Key<T>() where T : struct, IBaseComponent =>

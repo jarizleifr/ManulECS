@@ -35,11 +35,33 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
+    public void SetsObject() {
+      var e1 = new Entity(0, 0);
+      var e2 = new Entity(1, 0);
+      untypedPool.SetObject(e1, null);
+      untypedPool.SetObject(e2, null);
+      Assert.Equal(2, untypedPool.Count);
+      Assert.True(pool.Has(e1));
+      Assert.True(pool.Has(e2));
+    }
+
+    [Fact]
     public void InvokesOnUpdate_OnSet() {
       bool called = false;
       pool.OnUpdate += () => called = true;
       CreateTestEntities(1);
       Assert.True(called);
+    }
+
+    [Fact]
+    public void SetsAttributes_OnConstruct() {
+      var pool1 = new TagPool<OmitTag>(new Key(0, 1u));
+      Assert.True(pool1.Omit == Omit.Entity);
+      Assert.Null(pool1.Profile);
+
+      var pool2 = new TagPool<ProfileTag>(new Key(0, 1u));
+      Assert.True(pool2.Omit == Omit.None);
+      Assert.Equal("test-profile", pool2.Profile);
     }
   }
 }

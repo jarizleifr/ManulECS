@@ -6,7 +6,7 @@ namespace ManulECS {
     private readonly static T dummy = default;
     private uint[] mapping;
 
-    internal TagPool(in Key key) => Key = key;
+    internal TagPool(in Key key) : base(key, ECSSerializeAttribute.GetAttribute(typeof(T))) { }
 
     internal override object Get(in Entity _) => dummy;
 
@@ -24,6 +24,8 @@ namespace ManulECS {
         OnUpdate?.Invoke();
       }
     }
+
+    internal override void SetObject(in Entity entity, object _) => Set(entity);
 
     internal override void Remove(in Entity entity) {
       var id = entity.Id;

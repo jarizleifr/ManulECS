@@ -8,7 +8,7 @@ I wrote a library called ManulEC in 2019 for my roguelike game to provide simple
 
 ### Focus on simplicity
 
-Simplicity as in simple to understand, this has been a huge learning opportunity for myself and I've purposefully tried to keep things as clean as possible. There are bound to be more feature-rich and more performant ECS implementations out there, but my implementation does its job with just about 800 lines of code (not counting tests or blanks/comments).
+Simplicity as in simple to understand, this has been a huge learning opportunity for myself and I've purposefully tried to keep things as clean as possible. There are bound to be more feature-rich and more performant ECS implementations out there, but my implementation does its job in less than 1000 lines of code, comments and tests notwithstanding.
 
 Out-of-the-box, there are no system classes to override, no code generation, no events, no parallelism. Just the core functionality for composition, iteration and serialization. If you want more exotic features, you can write your own wrappers around ManulECS.
 
@@ -22,7 +22,7 @@ There's support for **Components** (regular structs), **Tags** (boolean flags) a
 
 ### Serialization
 
-Serialization has been written to be extendable, a serializer for JSON format has been included in the project.
+There's support for custom serializers, although the process is a bit involved. A serializer for JSON format has been included in the project.
 
 ## Overview
 
@@ -36,7 +36,7 @@ var world = new World(); // Create a new entity registry.
 
 ### Entity
 
-Entities are simple 4 byte structs, representing an internal id and a version number. We don't really need to concern ourselves with either, so practically entities are just values, used as-is. 
+Entities are just simple 4-byte value types, representing an internal id and a version number. 
 
 ```csharp
 var entity = world.Create(); // Create a new entity
@@ -45,7 +45,7 @@ world.Remove(entity);        // Remove the entity, clearing all components in th
 
 ### Components and Tags
 
-There are two kinds of things assignable to entities, Components and Tags. They are specified by using marker interfaces `IComponent` and `ITag`. These are only used for method constraints to give some useful static typing, so we're not unnecessarily boxing our structs. Component pools are setup automatically on first use, so there's no need to declare them beforehand.
+There are two kinds of things assignable to entities, Components and Tags. They are specified by using marker interfaces `IComponent` and `ITag`. These interfaces are used only for method constraints to give some useful static typing, so there's no unnecessary boxing of structs happening. Component pools are setup automatically on first use, so there's no need to declare them beforehand.
 
 Components are simple data structs.
 
@@ -56,20 +56,20 @@ public struct Pos : IComponent {
 }
 ```
 
-Tags don't contain any data. They're like a typed flag that we can set on an entity.
+Tags don't contain any data. They're like a typed boolean flag related to an entity.
 
 ```csharp
 public struct IsPlayer : ITag { }
 ```
 
-Easiest way to assign new components to entities is to use field initializers. Assign will only assign component if not already found on the entity, Patch will replace the existing component.
+Easiest way to assign new components to entities is to use field initializers. `Assign` will only assign component if not already found on the entity, `Patch` will replace the existing component.
 
 ```csharp
 world.Assign(entity, new Pos { x = 0, y = 0 }); // Will not overwrite
 world.Patch(entity, new Pos { x = 1, y = 1 });  // Will overwrite
 ```
 
-Tags have no replace function, as there's nothing to replace. Otherwise usage is similar, albeit with the Tag method.
+Tags have no replace function, as there's nothing to replace. Otherwise usage is similar, albeit with the `Tag` method.
 
 ```csharp
 world.Tag<IsPlayer>(entity);
@@ -176,65 +176,112 @@ We can use serialization profiles on resources as well. Note that Omit does noth
 public class Level { }
 ```
 
-I've included an example `WorldSerializer`, which uses the excellent Json.NET library. I might move this to another assembly in the future, as an optional add-on, so there'd be no dependencies.
+`WorldSerializer` abstract class exposes two public methods `Write` and `Read`, which can be used to serialize and deserialize world state accordingly. 
 
-`WorldSerializer` abstract class exposes two public methods `Write` and `Read`, which can be used to serialize and deserialize world state accordingly.
+The project includes a derived `JsonWorldSerializer` class, which can be used to serialize/deserialize the World state to/from JSON format. JSON serialization uses `System.Text.Json` under the hood, so there are no external dependencies. 
+
+It's a good idea to reuse serializer instances, as it caches some of the information needed to properly convert components. This way caches won't need to be built again from scratch on every write/read.
 
 When not providing a serialization profile string, all resources and components that don't belong to any profiles will get serialized.
 
 ```csharp
 // Default serialization
-using var fileStream = new FileStream("path/to/some/file");
 var serializer = new JsonWorldSerializer();
-serializer.Write(fileStream, world);
+serializer.Write(stream, world);
 ```
 
 Alternatively, we can provide a serialization profile, which will serialize only matching entities and resources.
 
 ```csharp
-// Serialize only stuff set to "global" profile
-serializer.Write(fileStream, world, "global");
+// Serialize only stuff set with the "global" profile
+serializer.Write(stream, world, "global");
 ```
 
 `serializer.Read` works incrementally, so we can combine multiple sets of saved data in a single world. An example use-case would be backtracking, where we want to combine global data with some level-specific data on level transitions 
 
 ```csharp
-using (var fs = new FileStream("globaldata.json")) {
-  var serializer = new JsonWorldSerializer { Profile = profile };
-  serializer.Read(fs, world);
-}
-using (var fs = new FileStream("leveldata.json")) {
-  var serializer = new JsonWorldSerializer();
-  serializer.Read(fs, world);
-}
+  var serializer = new JsonWorldSerializer(); 
+  serializer.Read(stream, world, "global");
+  ...
+  serializer.Read(someOtherStream, world);
 ```
 
-For the included `JsonWorldSerializer`, I've created a couple static wrapper methods for easier handling of JSON strings.
+For the included `JsonWorldSerializer`, I've created a couple extra methods for easier handling of JSON strings.
 
 ```csharp
-var json = JsonWorldSerializer.Serialize(world, "global");
+var json = serializer.Serialize(world, "global");
 File.WriteAllText("global.json", json);
 ```
 
 ```csharp
 var json = File.ReadAllText("global.json");
-JsonWorldSerializer.Deserialize(world, json);
+serializer.Deserialize(world, json);
 ```
 
-Serialization API is pretty rudimentary by design. Making wrappers for any particular use case is easy, and having access to the raw streams is useful, you can for example use MemoryStreams when doing tests and use FileStreams for actual program. You can even write straight to an entry in a Zip archive, if you want to compress your saves.
+There's a small limitation in deserialization - all components and resources need to belong to the same assembly. By default, the deserialization process looks for possible types to deserialize to in the entry assembly, but we can also customize the used assembly name.
+
+```csharp
+var serializer = new JsonWorldSerializer() { AssemblyName = "SomeOtherAssembly" };
+```
+
+The resulting JSON would look something like this:
+
+```json
+{
+  "Entities": {
+    "0": {
+      "SomeNamespace.SomeComponent": {
+        "someField": "someValue"
+      }
+    }
+  },
+  "Resources": {
+    "SomeNamespace.SomeResource": {
+      "someData": "someValue"
+    }
+  }
+}
+```
+
+Components can belong to different namespaces though. By default components and resources are serialized by their full names, but we can omit namespaces from serialization by providing one explicitly. This alone can drastically decrease uncompressed filesizes.
+
+```csharp
+var serializer = new JsonWorldSerializer() { Namespace = "SomeNamespace" };
+```
+
+When providing namespaces, the resulting JSON would look something like this instead:
+
+```json
+{
+  "Entities": {
+    "0": {
+      "SomeComponent": {
+        "someField": "someValue"
+      }
+    }
+  },
+  "Resources": {
+    "SomeResource": {
+      "someData": "someValue"
+    }
+  }
+}
+```
+
+On deserialize, the types would then be automatically constructed as `SomeNamespace.SomeComponent` and `SomeNamespace.SomeResource`.
 
 ## Benchmarks
 
 I've included my testing benchmarks in ManulECS.Benchmark project, using the BenchmarkDotNet library.
 
-Benchmarks were run on Windows 10, .NET 6.0.4 with:
-Intel Core i5-8600K CPU 3.60GHz (Coffee Lake), 1 CPU, 6 logical and 6 physical cores
+Benchmarks were run on:
+> .NET 6.0.4 on Windows 10
+> Intel Core i5-8600K CPU 3.60GHz (Coffee Lake), 1 CPU, 6 logical and 6 physical cores
+> 16 GB RAM
 
 ### Creation and removal
 
-We start reaching the multi-ms range at creating/removing 100000 entities per frame, which on its own seems like a bit extreme use case. We could shave off about 0.500ms by having to declare components beforehand, in which case we could omit some checks, but I find the performance hit to be justified in this case, as it makes code simpler and easier to maintain. 
-
-Tags do still have some overhead, albeit less than components.
+We start reaching the multi-ms range at creating/removing 100000 entities per frame, which on its own seems like a bit extreme use case. Tags do still have some overhead, albeit less than components.
 
 |                        Method |      N |     Mean |     Error |    StdDev | Allocated |
 |------------------------------ |------- |---------:|----------:|----------:|----------:|
@@ -275,3 +322,14 @@ For tags, there's virtually no difference between looping through 1 or 2 tags.
 |  Loop1Tag | 100000 | 24.50 μs | 0.081 μs | 0.076 μs |
 | Loop2Tags | 100000 | 24.50 μs | 0.063 μs | 0.056 μs |
  
+### Serialization
+
+The benchmark serializes/deserializes a world containing 100000 entities, each with two Components and one Tag. Serialization benchmarks use MemoryStreams, so results are most likely different when writing to an actual filesystem. Serialization also relies heavily on caching, so first runs might take longer than the subsequent ones, especially if deserializing lots of components that haven't been registered yet. 
+
+Nevertheless, it's advisable to not serialize/deserialize World data in the middle of the tightest gameplay loops. It's still fast *enough* for things like autosaves, dumping state on disk between level transitions etc. For comparisons, according to the profiler, my own (relatively complex) roguelike game takes on average about 500ms to deserialize and 300ms to serialize.
+
+|      Method |      N |     Mean |   Error |  StdDev |     Gen 0 | Allocated |
+|------------ |------- |---------:|--------:|--------:|----------:|----------:|
+|   Serialize | 100000 | 107.1 ms | 0.56 ms | 0.50 ms | 3000.0000 |     25 MB |
+| Deserialize | 100000 | 145.6 ms | 1.45 ms | 1.35 ms | 4000.0000 |     35 MB |
+

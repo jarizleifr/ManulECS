@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Xunit;
@@ -22,7 +21,7 @@ namespace ManulECS.Tests {
         otherWorld.Handle().Assign(new Component1 { });
         otherWorld.Handle().Assign(new Component1 { }).Assign(new Component2 { });
       }
-      Assert.Equal(20, otherWorld.EntityCount);
+      Assert.Equal(20, otherWorld.Count());
       Assert.Equal(20, otherWorld.Count<Component1>());
       Assert.Equal(10, otherWorld.Count<Component2>());
     }
@@ -42,7 +41,7 @@ namespace ManulECS.Tests {
     [Fact]
     public void Clears() {
       world.Clear();
-      Assert.Equal(0, world.EntityCount);
+      Assert.Equal(0, world.Count());
       Assert.Equal(0, world.Count<Component1>());
       Assert.Equal(0, world.Count<Component2>());
     }
@@ -55,10 +54,10 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void UpdatesEntityCount_WhenEntityRemoved() {
+    public void UpdatesCount_WhenEntityRemoved() {
       var entities = world.Entities.ToList();
       world.Remove(entities[0]);
-      Assert.Equal(entities.Count - 1, world.EntityCount);
+      Assert.Equal(entities.Count - 1, world.Count());
     }
 
     [Fact]
@@ -67,16 +66,57 @@ namespace ManulECS.Tests {
       world.Assign(e, new Component1 { value = 100u });
       var comp = world.Get<Component1>(e);
       Assert.Equal(100u, comp.value);
+      Assert.True(world.EntityKey(e)[world.Key<Component1>()]);
     }
 
     [Fact]
-    public void ReplacesComponent() {
-      var e = world.Create();
-      world.Assign(e, new Component1 { value = 100u });
+    public void PatchesComponent() {
+      var e = world.Handle().Assign(new Component1 { value = 100u });
       world.Patch(e, new Component1 { value = 200u });
 
       var comp = world.Get<Component1>(e);
       Assert.Equal(200u, comp.value);
+      Assert.True(world.EntityKey(e)[world.Key<Component1>()]);
+    }
+
+    [Fact]
+    public void RemovesComponent() {
+      var e = world.Handle().Assign(new Component1 { value = 100u });
+      Assert.True(world.Has<Component1>(e));
+      Assert.True(world.EntityKey(e)[world.Key<Component1>()]);
+
+      world.Remove<Component1>(e);
+      Assert.False(world.Has<Component1>(e));
+      Assert.False(world.EntityKey(e)[world.Key<Component1>()]);
+    }
+
+    [Fact]
+    public void Tags() {
+      var e = world.Handle().Tag<Tag>();
+      Assert.True(world.Has<Tag>(e));
+      Assert.True(world.EntityKey(e)[world.Key<Tag>()]);
+    }
+
+    [Fact]
+    public void Untags() {
+      var e = world.Handle().Tag<Tag>();
+      Assert.True(world.Has<Tag>(e));
+      Assert.True(world.EntityKey(e)[world.Key<Tag>()]);
+
+      world.Remove<Tag>(e);
+      Assert.False(world.Has<Tag>(e));
+      Assert.False(world.EntityKey(e)[world.Key<Tag>()]);
+    }
+
+    [Fact]
+    public void AssignsObject() {
+      var e = world.Create();
+      world.AssignObject(e, typeof(Component1), new Component1 { value = 100u });
+      world.AssignObject(e, typeof(Tag), null);
+      var comp = world.Get<Component1>(e);
+      Assert.Equal(100u, comp.value);
+      Assert.True(world.Has<Tag>(e));
+      Assert.True(world.EntityKey(e)[world.Key<Tag>()]);
     }
 
     [Fact]

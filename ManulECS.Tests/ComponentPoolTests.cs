@@ -53,10 +53,32 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
+    public void SetsUntypedComponent() {
+      var e1 = new Entity(0, 0);
+      var e2 = new Entity(1, 0);
+      untypedPool.SetObject(e1, new Component1 { value = 1 });
+      untypedPool.SetObject(e2, new Component1 { value = 2 });
+      Assert.Equal(2, untypedPool.Count);
+      Assert.Equal(1u, ((Component1)untypedPool.Get(e1)).value);
+      Assert.Equal(2u, ((Component1)untypedPool.Get(e2)).value);
+    }
+
+    [Fact]
     public void GetsCorrectValue_AfterReplacingIntermediateWithLast() {
       var entities = CreateTestEntities(3);
       pool.Remove(entities[0]);
       Assert.Equal(2u, pool[entities[2]].value);
+    }
+
+    [Fact]
+    public void SetsAttributes_OnConstruct() {
+      var pool1 = new Pool<DiscardEntity>(new Key(0, 1u));
+      Assert.True(pool1.Omit == Omit.Entity);
+      Assert.Null(pool1.Profile);
+
+      var pool2 = new Pool<ProfileComponent1>(new Key(0, 1u));
+      Assert.True(pool2.Omit == Omit.None);
+      Assert.Equal("test-profile", pool2.Profile);
     }
   }
 

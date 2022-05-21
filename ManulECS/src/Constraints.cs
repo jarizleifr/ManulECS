@@ -8,3 +8,4 @@ namespace ManulECS {
   /// <summary>Marker interface for tag constraints.</summary>
   public interface ITag : IBaseComponent { }
 }
+

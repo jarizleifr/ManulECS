@@ -1,3 +1,5 @@
+using System.IO;
+using System.Text;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 
@@ -7,6 +9,12 @@ namespace ManulECS.Benchmark {
   public class Serialization {
     private World world;
     private string json;
+    private byte[] bytes;
+
+    private JsonWorldSerializer serializer = new() {
+      Namespace = "ManulECS.Benchmark",
+      AssemblyName = "ManulECS.Benchmark"
+    };
 
     [Params(100000)]
     public int N;
@@ -20,7 +28,10 @@ namespace ManulECS.Benchmark {
         world.Handle().Tag<Tag1>().Assign(new Comp1 { }).Assign(new Comp2 { });
       }
       if (json == null) {
-        json = JsonWorldSerializer.Serialize(world);
+        using var stream = new MemoryStream();
+        serializer.Write(stream, world);
+        json = Encoding.UTF8.GetString(stream.ToArray());
+        bytes = Encoding.UTF8.GetBytes(json);
       }
     }
 
@@ -28,13 +39,15 @@ namespace ManulECS.Benchmark {
     public void Cleanup() => world.Clear();
 
     [Benchmark]
-    public void Deserialize() {
-      JsonWorldSerializer.Deserialize(world, json);
+    public void Serialize() {
+      using var stream = new MemoryStream();
+      serializer.Write(stream, world);
     }
 
     [Benchmark]
-    public void Serialize() {
-      JsonWorldSerializer.Serialize(world);
+    public void Deserialize() {
+      using var stream = new MemoryStream(bytes);
+      serializer.Read(stream, world);
     }
   }
 }

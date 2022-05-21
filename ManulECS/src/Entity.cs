@@ -1,35 +1,31 @@
 using System;
 using System.Runtime.CompilerServices;
-using Newtonsoft.Json;
 
 namespace ManulECS {
-  [JsonObject(MemberSerialization.OptIn)]
   public readonly struct Entity : IEquatable<Entity> {
     public static readonly Entity NULL_ENTITY = new(NULL_ID, 0);
     public const uint NULL_ID = 0xFFFFFF;
 
-    [JsonProperty("uuid")]
-    private readonly uint value = NULL_ID;
+    internal readonly uint uuid = NULL_ID;
 
     internal uint Id {
       [MethodImpl(MethodImplOptions.AggressiveInlining)]
-      get => value >> 8;
+      get => uuid >> 8;
     }
-    internal byte Version => (byte)value;
+    internal byte Version => (byte)uuid;
 
     internal Entity(uint id, byte version) {
       if (id > NULL_ID) throw new Exception("FATAL ERROR: Max number of entities exceeded!");
-      value = id << 8 | version;
+      uuid = id << 8 | version;
     }
 
-    [JsonConstructor]
-    internal Entity(uint uuid) => value = uuid;
+    internal Entity(uint uuid) => this.uuid = uuid;
 
     internal void Deconstruct(out uint id, out byte version) {
       id = Id; version = Version;
     }
 
-    public bool Equals(Entity entity) => value == entity.value;
+    public bool Equals(Entity entity) => uuid == entity.uuid;
 
     public static bool operator ==(Entity left, Entity right) => left.Equals(right);
     public static bool operator !=(Entity left, Entity right) => !left.Equals(right);
@@ -39,7 +35,7 @@ namespace ManulECS {
     public override bool Equals(object obj) =>
       obj is Entity entity && Equals(entity);
 
-    public override int GetHashCode() => value.GetHashCode();
+    public override int GetHashCode() => uuid.GetHashCode();
   }
 
   public readonly struct EntityHandle {

@@ -1,4 +1,3 @@
-﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 
 namespace ManulECS.Benchmark {
@@ -12,12 +11,12 @@ namespace ManulECS.Benchmark {
   public class Program {
     public static void Main() {
       BenchmarkSwitcher.FromTypes(new[] {
-        // typeof(CreateEntity),
-        // typeof(RemoveEntity),
-        // typeof(Components),
-        // typeof(Tags),
+        typeof(CreateEntity),
+        typeof(RemoveEntity),
+        typeof(Components),
+        typeof(Tags),
         typeof(Serialization),
-        }).RunAll();
+      }).RunAll();
     }
   }
 }

@@ -20,10 +20,20 @@ namespace ManulECS.Tests {
   [ECSSerialize(Omit.Entity)]
   public struct DiscardEntity : IComponent { }
 
+  [ECSSerialize(Omit.Entity)]
+  public struct OmitTag : ITag { }
+
+  [ECSSerialize("test-profile")]
+  public struct ProfileTag : ITag { }
+
   public struct ComponentWithReference1 : IComponent {
     public Entity entity;
   }
   public struct ComponentWithReference2 : IComponent {
     public Entity entity;
+  }
+
+  public class TestResource {
+    public string TestData { get; set; } = "SomeValue";
   }
 }
