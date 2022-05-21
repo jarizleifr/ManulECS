@@ -12,11 +12,12 @@ namespace ManulECS.Benchmark {
   public class Program {
     public static void Main() {
       BenchmarkSwitcher.FromTypes(new[] {
-        typeof(CreateEntity),
-        typeof(RemoveEntity),
-        typeof(Components),
-        typeof(Tags),
-      }).RunAll();
+        // typeof(CreateEntity),
+        // typeof(RemoveEntity),
+        // typeof(Components),
+        // typeof(Tags),
+        typeof(Serialization),
+        }).RunAll();
     }
   }
 }
