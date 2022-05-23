@@ -200,10 +200,9 @@ serializer.Write(stream, world, "global");
 `serializer.Read` works incrementally, so we can combine multiple sets of saved data in a single world. An example use-case would be backtracking, where we want to combine global data with some level-specific data on level transitions 
 
 ```csharp
-  var serializer = new JsonWorldSerializer(); 
-  serializer.Read(stream, world, "global");
-  ...
-  serializer.Read(someOtherStream, world);
+serializer.Read(stream, world);
+...
+serializer.Read(someOtherStream, world);
 ```
 
 For the included `JsonWorldSerializer`, I've created a couple extra methods for easier handling of JSON strings.
@@ -275,9 +274,9 @@ On deserialize, the types would then be automatically constructed as `SomeNamesp
 I've included my testing benchmarks in ManulECS.Benchmark project, using the BenchmarkDotNet library.
 
 Benchmarks were run on:
-> .NET 6.0.4 on Windows 10
-> Intel Core i5-8600K CPU 3.60GHz (Coffee Lake), 1 CPU, 6 logical and 6 physical cores
-> 16 GB RAM
+> .NET 6.0.4 on Windows 10  
+> Intel Core i5-8600K CPU 3.60GHz (Coffee Lake), 1 CPU, 6 logical and 6 physical cores  
+> 16 GB RAM  
 
 ### Creation and removal
 
