@@ -1,4 +1,3 @@
-using System;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 
@@ -7,20 +6,23 @@ namespace ManulECS.Benchmark {
   [SimpleJob(RunStrategy.Throughput, invocationCount: 1000)]
   public class Components {
     private World world;
-    private readonly Random rng = new(0);
+    private Key viewKey;
 
     [Params(100000)]
     public int N;
 
     [GlobalSetup]
-    public void GlobalSetup() => world = new World();
+    public void GlobalSetup() {
+      world = new World();
+      viewKey = world.Key<Pos>() + world.Key<Move>();
+    }
 
     [IterationSetup]
     public void Setup() {
       for (int i = 0; i < N; i++) {
         world.Handle()
-          .Assign(new Pos { x = rng.Next(0, 100), y = rng.Next(0, 100) })
-          .Assign(new Move { mx = rng.Next(-1, 2), my = rng.Next(-1, 2) });
+          .Assign(new Pos { x = 2, y = 5 })
+          .Assign(new Move { mx = 7, my = 3 });
       }
       world.View<Pos>();
       world.View<Pos, Move>();
@@ -37,6 +39,7 @@ namespace ManulECS.Benchmark {
         pos.x += 1;
       }
     }
+
     [Benchmark]
     public void Update2Components() {
       var (positions, moves) = world.Pools<Pos, Move>();
@@ -47,12 +50,14 @@ namespace ManulECS.Benchmark {
         pos.y += mov.my;
       }
     }
+
     [Benchmark]
     public void Update2Components_WorstCaseScenario() {
+      var view = world.views[viewKey];
+      view.SetToDirty();
+      view.Update(world);
       var (positions, moves) = world.Pools<Pos, Move>();
-      var view = world.View<Pos, Move>();
-      view.SetToUpdate();
-      foreach (var e in view) {
+      foreach (var e in view.AsSpan()) {
         ref var pos = ref positions[e];
         ref var mov = ref moves[e];
         pos.x += mov.mx;

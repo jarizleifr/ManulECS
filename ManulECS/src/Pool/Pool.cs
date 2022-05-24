@@ -25,7 +25,7 @@ namespace ManulECS {
       Reset();
     }
 
-    public EntityEnumerator GetEnumerator() => new(entities, nextIndex);
+    public ReadOnlySpan<Entity> AsSpan() => entities.AsSpan(0, nextIndex);
 
     internal abstract bool Has(in Entity entity);
     internal abstract object Get(in Entity entity);

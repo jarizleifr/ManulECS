@@ -1,39 +1,30 @@
 using System;
-using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using static ManulECS.ArrayUtil;
 
 namespace ManulECS {
-  /// <summary>A view of entities.</summary>
-  public sealed class View : IDisposable {
+  /// <summary>A view of entities, possessing the components specified in the key.</summary>
+  public sealed class View {
     private readonly Key key;
-    private readonly List<Pool> subscribed = new();
-
     private Entity[] entities = new Entity[World.INITIAL_CAPACITY];
-    private int count = 0;
-    public int Count => count;
 
-    private bool shouldUpdate = true;
-    internal void SetToUpdate() => shouldUpdate = true;
+    private int count = 0;
+    private bool dirty = true;
+    internal void SetToDirty() => dirty = true;
 
     internal View(World world, Key key) {
       this.key = key;
-
       foreach (var idx in key) {
         var pool = world.pools.PoolByKeyIndex(idx);
-        pool.OnUpdate += SetToUpdate;
+        pool.OnUpdate += SetToDirty;
       }
-      Update(world);
     }
 
-    public void Dispose() {
-      foreach (var pool in subscribed) {
-        pool.OnUpdate -= SetToUpdate;
-      }
-      GC.SuppressFinalize(this);
-    }
+    internal void Clear() =>
+      (entities, count, dirty) = (new Entity[World.INITIAL_CAPACITY], 0, true);
 
     internal void Update(World world) {
-      if (shouldUpdate) {
+      if (dirty) {
         Pool smallest = null;
         foreach (var idx in key) {
           var pool = world.pools.PoolByKeyIndex(idx);
@@ -43,32 +34,16 @@ namespace ManulECS {
         }
         count = 0;
         EnsureSize(ref entities, smallest.Count, Entity.NULL_ENTITY);
-        foreach (var entity in smallest) {
+        foreach (var entity in smallest.AsSpan()) {
           if (world.EntityKey(entity)[key]) {
             entities[count++] = entity;
           }
         }
-        shouldUpdate = false;
+        dirty = false;
       }
     }
 
-    /// <summary>Returns an enumerator that iterates through entities.</summary>
-    public EntityEnumerator GetEnumerator() => new(entities, count);
-  }
-
-  public struct EntityEnumerator {
-    private readonly Entity[] entities;
-    private readonly int length;
-    private int index;
-
-    public EntityEnumerator(Entity[] entities, int length) {
-      this.entities = entities;
-      this.length = length;
-      index = -1;
-    }
-
-    public Entity Current => entities[index];
-
-    public bool MoveNext() => ++index < length;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ReadOnlySpan<Entity> AsSpan() => entities.AsSpan(0, count);
   }
 }

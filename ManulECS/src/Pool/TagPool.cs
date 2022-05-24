@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using static ManulECS.ArrayUtil;
 
 namespace ManulECS {
@@ -10,6 +11,7 @@ namespace ManulECS {
 
     internal override object Get(in Entity _) => dummy;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal override bool Has(in Entity entity) =>
       entity.Id < mapping.Length && mapping[entity.Id] != Entity.NULL_ID;
 

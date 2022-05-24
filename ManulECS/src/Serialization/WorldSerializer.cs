@@ -34,7 +34,7 @@ namespace ManulECS {
     public abstract void Write(Stream stream, World world, string profile = null);
 
     /// <summary>Gets a list of resources from the current World as objects.</summary>
-    protected IEnumerable<object> GetResources(World world, string profile) => world.Resources
+    protected IEnumerable<object> GetResources(World world, string profile) => world.resources.Values
       .Where(r => ECSSerializeAttribute.GetAttribute(r.GetType())?.Profile == profile);
 
     /// <summary>
@@ -56,6 +56,7 @@ namespace ManulECS {
 
       ///<summary>Gets the current Entity</summary>
       public Entity Entity => world[current];
+
       ///<summary>Gets the current component from the current Entity.</summary>
       public object Component { get; private set; }
 

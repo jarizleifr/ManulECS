@@ -113,7 +113,7 @@ namespace ManulECS.Tests {
     public void Gets_Indices() {
       CreateTestEntities(3);
       var list = new List<uint>();
-      foreach (var e in untypedPool) {
+      foreach (var e in untypedPool.AsSpan()) {
         list.Add(e.Id);
       }
       Assert.Contains(0u, list);
@@ -129,7 +129,7 @@ namespace ManulECS.Tests {
       untypedPool.Remove(entities[1]);
       untypedPool.Remove(entities[3]);
       var list = new List<uint>();
-      foreach (var e in untypedPool) {
+      foreach (var e in untypedPool.AsSpan()) {
         list.Add(e.Id);
       }
       Assert.Equal(2, list.Count);
@@ -167,7 +167,7 @@ namespace ManulECS.Tests {
       CreateTestEntities(5);
       untypedPool.Reset();
       var list = new List<uint>();
-      foreach (var e in untypedPool) {
+      foreach (var e in untypedPool.AsSpan()) {
         list.Add(e.Id);
       }
       Assert.Empty(list);

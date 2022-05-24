@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using static ManulECS.ArrayUtil;
 
@@ -14,17 +13,13 @@ namespace ManulECS {
     private Entity[] entities = new Entity[INITIAL_CAPACITY];
     private Key[] entityKeys = new Key[INITIAL_CAPACITY];
 
-    private readonly Dictionary<Type, object> resources = new();
+    internal readonly Dictionary<Type, object> resources = new();
     internal readonly PoolCollection pools = new();
-    internal readonly ViewCache viewCache = new();
+    internal readonly Dictionary<Key, View> views = new();
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal ref Key EntityKey(in Entity entity) => ref entityKeys[entity.Id];
     internal Entity this[int index] => entities[index];
-
-    internal IEnumerable<object> Resources => resources.Values;
-    internal IEnumerable<Entity> Entities => nextId != 0
-      ? entities.Where((entity, index) => entity.Id == index)
-      : Enumerable.Empty<Entity>();
 
     internal uint Capacity => nextId;
     /// <summary>Gets the count of alive entities.</summary>
@@ -77,25 +72,23 @@ namespace ManulECS {
       entities = new Entity[INITIAL_CAPACITY];
       entityKeys = new Key[INITIAL_CAPACITY];
       destroyed = Entity.NULL_ID;
-      nextId = 0;
-      count = 0;
+      (nextId, count) = (0, 0);
 
       pools.Clear();
       resources.Clear();
-      viewCache.Clear();
+      foreach (var view in views.Values) {
+        view.Clear();
+      }
     }
 
     /// <summary>Gets the count of components of type T.</summary>
-    public int Count<T>() where T : struct, IBaseComponent =>
-      UntypedPool<T>().Count;
+    public int Count<T>() where T : struct, IBaseComponent => UntypedPool<T>().Count;
 
     /// <summary>Does entity have a component or tag of type T?</summary>
-    public bool Has<T>(in Entity entity) where T : struct, IBaseComponent =>
-      UntypedPool<T>().Has(entity);
+    public bool Has<T>(in Entity entity) where T : struct, IBaseComponent => UntypedPool<T>().Has(entity);
 
     /// <summary>Gets a component reference of type T from an entity.</summary>
-    public ref T Get<T>(in Entity entity) where T : struct, IComponent =>
-      ref Pool<T>()[entity];
+    public ref T Get<T>(in Entity entity) where T : struct, IComponent => ref Pool<T>()[entity];
 
     /// <summary>Gets a component of type T from an entity, if it exists.</summary>
     /// <returns>true if component found, false otherwise</returns>
@@ -177,7 +170,7 @@ namespace ManulECS {
     public void Clear<T>() where T : struct, IBaseComponent {
       var pool = UntypedPool<T>();
       var key = pool.Key;
-      foreach (var entity in pool) {
+      foreach (var entity in pool.AsSpan()) {
         ref var flags = ref EntityKey(entity);
         flags -= key;
       }
@@ -185,6 +178,7 @@ namespace ManulECS {
     }
 
     /// <summary>Gets entity validity.</summary> 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsAlive(in Entity entity) => entity.Id != Entity.NULL_ID && entities[entity.Id] == entity;
 
     /// <summary>Gets the resource of type T.</summary> 
@@ -217,16 +211,24 @@ namespace ManulECS {
       }
     }
 
+    /// <summary>Gets a cached view, and creates one if it doesn't exist.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal Key Key<T>() where T : struct, IBaseComponent =>
-      pools.Pool<T>().Key;
+    internal View GetView(World world, Key key) {
+      if (!views.TryGetValue(key, out View view)) {
+        view = new View(world, key);
+        views.Add(key, view);
+      }
+      view.Update(world);
+      return view;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal Pool UntypedPool<T>() where T : struct, IBaseComponent =>
-      pools.Pool<T>();
+    internal Key Key<T>() where T : struct, IBaseComponent => pools.Pool<T>().Key;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal TagPool<T> TagPool<T>() where T : struct, ITag =>
-      (TagPool<T>)pools.Pool<T>();
+    internal Pool UntypedPool<T>() where T : struct, IBaseComponent => pools.Pool<T>();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal TagPool<T> TagPool<T>() where T : struct, ITag => (TagPool<T>)pools.Pool<T>();
   }
 }

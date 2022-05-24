@@ -62,12 +62,5 @@ namespace ManulECS.Tests {
       Assert.Contains(64, flags);
       Assert.Contains(126, flags);
     }
-
-    [Fact]
-    public void FindsBitPosition() {
-      Assert.Equal(0u, BitUtil.Position(0, 1));
-      Assert.Equal(33u, BitUtil.Position(1, 2));
-      Assert.Equal(37u, BitUtil.Position(1, 32));
-    }
   }
 }

@@ -16,8 +16,7 @@ namespace ManulECS {
     }
 
     internal override bool Has(in Entity entity) =>
-      entity.Id < mapping.Length &&
-      mapping[entity.Id] != Entity.NULL_ID;
+      entity.Id < mapping.Length && mapping[entity.Id] != Entity.NULL_ID;
 
     internal void Set(in Entity entity) => Set(entity, default);
 

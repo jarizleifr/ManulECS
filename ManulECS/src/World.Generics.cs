@@ -1,4 +1,6 @@
+using System;
 using System.Runtime.CompilerServices;
+
 namespace ManulECS {
   public partial class World {
     /// <summary>Gets a pool of components of type T</summary>
@@ -35,53 +37,46 @@ namespace ManulECS {
 
     /// <summary>Get a view of entities with one component</summary>
     /// <returns>View of entities possessing component of type T1</returns>
-    public View View<T1>() where T1 : struct, IBaseComponent => viewCache.GetView(this, Key<T1>());
+    public ReadOnlySpan<Entity> View<T1>() where T1 : struct, IBaseComponent => GetView(this, Key<T1>()).AsSpan();
 
     /// <summary>Get a view of entities with two components</summary>
     /// <returns>View of entities possessing components of types T1,T2</returns>
-    public View View<T1, T2>() where T1 : struct, IBaseComponent where T2 : struct, IBaseComponent =>
-        viewCache.GetView(this, Key<T1>() + Key<T2>());
+    public ReadOnlySpan<Entity> View<T1, T2>() where T1 : struct, IBaseComponent where T2 : struct, IBaseComponent =>
+      GetView(this, Key<T1>() + Key<T2>()).AsSpan();
 
     /// <summary>Get a view of entities with three components</summary>
     /// <returns>View of entities possessing components of types T1,T2,T3</returns>
-    public View View<T1, T2, T3>() where T1 : struct, IBaseComponent where T2 : struct, IBaseComponent where T3 : struct, IBaseComponent =>
-        viewCache.GetView(this, Key<T1>() + Key<T2>() + Key<T3>());
+    public ReadOnlySpan<Entity> View<T1, T2, T3>() where T1 : struct, IBaseComponent where T2 : struct, IBaseComponent where T3 : struct, IBaseComponent =>
+      GetView(this, Key<T1>() + Key<T2>() + Key<T3>()).AsSpan();
 
     /// <summary>Get a view of entities with four components</summary>
     /// <returns>View of entities possessing components of types T1,T2,T3,T4</returns>
-    public View View<T1, T2, T3, T4>()
+    public ReadOnlySpan<Entity> View<T1, T2, T3, T4>()
       where T1 : struct, IBaseComponent where T2 : struct, IBaseComponent where T3 : struct, IBaseComponent where T4 : struct, IBaseComponent =>
-        viewCache.GetView(this, Key<T1>() + Key<T2>() + Key<T3>() + Key<T4>());
+        GetView(this, Key<T1>() + Key<T2>() + Key<T3>() + Key<T4>()).AsSpan();
 
     /// <summary>Get a view of entities with five components</summary>
     /// <returns>View of entities possessing components of types T1,T2,T3,T4,T5</returns>
-    public View View<T1, T2, T3, T4, T5>()
+    public ReadOnlySpan<Entity> View<T1, T2, T3, T4, T5>()
       where T1 : struct, IBaseComponent where T2 : struct, IBaseComponent where T3 : struct, IBaseComponent where T4 : struct, IBaseComponent where T5 : struct, IBaseComponent =>
-        viewCache.GetView(this, Key<T1>() + Key<T2>() + Key<T3>() + Key<T4>() + Key<T5>());
+        GetView(this, Key<T1>() + Key<T2>() + Key<T3>() + Key<T4>() + Key<T5>()).AsSpan();
 
     /// <summary>Get a view of entities with six components</summary>
     /// <returns>View of entities possessing components of types T1,T2,T3,T4,T5,T6</returns>
-    public View View<T1, T2, T3, T4, T5, T6>()
-      where T1 : struct, IBaseComponent where T2 : struct, IBaseComponent where T3 : struct, IBaseComponent where T4 : struct, IBaseComponent
-      where T5 : struct, IBaseComponent where T6 : struct, IBaseComponent =>
-        viewCache.GetView(this, Key<T1>() + Key<T2>() + Key<T3>() + Key<T4>() + Key<T5>() + Key<T6>());
+    public ReadOnlySpan<Entity> View<T1, T2, T3, T4, T5, T6>()
+      where T1 : struct, IBaseComponent where T2 : struct, IBaseComponent where T3 : struct, IBaseComponent where T4 : struct, IBaseComponent where T5 : struct, IBaseComponent where T6 : struct, IBaseComponent =>
+        GetView(this, Key<T1>() + Key<T2>() + Key<T3>() + Key<T4>() + Key<T5>() + Key<T6>()).AsSpan();
 
     /// <summary>Get a view of entities with seven components</summary>
     /// <returns>View of entities possessing components of types T1,T2,T3,T4,T5,T6,T7</returns>
-    public View View<T1, T2, T3, T4, T5, T6, T7>()
-      where T1 : struct, IBaseComponent where T2 : struct, IBaseComponent where T3 : struct, IBaseComponent where T4 : struct, IBaseComponent
-      where T5 : struct, IBaseComponent where T6 : struct, IBaseComponent where T7 : struct, IBaseComponent =>
-        viewCache.GetView(this,
-          Key<T1>() + Key<T2>() + Key<T3>() + Key<T4>() + Key<T5>() + Key<T6>() + Key<T7>()
-        );
+    public ReadOnlySpan<Entity> View<T1, T2, T3, T4, T5, T6, T7>()
+      where T1 : struct, IBaseComponent where T2 : struct, IBaseComponent where T3 : struct, IBaseComponent where T4 : struct, IBaseComponent where T5 : struct, IBaseComponent where T6 : struct, IBaseComponent where T7 : struct, IBaseComponent =>
+        GetView(this, Key<T1>() + Key<T2>() + Key<T3>() + Key<T4>() + Key<T5>() + Key<T6>() + Key<T7>()).AsSpan();
 
     /// <summary>Get a view of entities with eight components</summary>
     /// <returns>View of entities possessing components of types T1,T2,T3,T4,T5,T6,T7,T8</returns>
-    public View View<T1, T2, T3, T4, T5, T6, T7, T8>()
-      where T1 : struct, IBaseComponent where T2 : struct, IBaseComponent where T3 : struct, IBaseComponent where T4 : struct, IBaseComponent
-      where T5 : struct, IBaseComponent where T6 : struct, IBaseComponent where T7 : struct, IBaseComponent where T8 : struct, IBaseComponent =>
-        viewCache.GetView(this,
-          Key<T1>() + Key<T2>() + Key<T3>() + Key<T4>() + Key<T5>() + Key<T6>() + Key<T7>() + Key<T8>()
-        );
+    public ReadOnlySpan<Entity> View<T1, T2, T3, T4, T5, T6, T7, T8>()
+      where T1 : struct, IBaseComponent where T2 : struct, IBaseComponent where T3 : struct, IBaseComponent where T4 : struct, IBaseComponent where T5 : struct, IBaseComponent where T6 : struct, IBaseComponent where T7 : struct, IBaseComponent where T8 : struct, IBaseComponent =>
+        GetView(this, Key<T1>() + Key<T2>() + Key<T3>() + Key<T4>() + Key<T5>() + Key<T6>() + Key<T7>() + Key<T8>()).AsSpan();
   }
 }

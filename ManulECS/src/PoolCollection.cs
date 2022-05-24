@@ -1,27 +1,35 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using static ManulECS.ArrayUtil;
 
 namespace ManulECS {
+  internal readonly record struct KeyFlag(uint Index, uint Bits) {
+    internal KeyFlag Next => Bits != 0x8000_0000 ? new(Index, Bits << 1) : new(Index + 1, 1u);
+
+    public static implicit operator Key(KeyFlag flag) => new(flag.Index, flag.Bits);
+    public static implicit operator uint(KeyFlag flag) {
+      (int i, uint pos) = (1, 0);
+      while ((i & flag.Bits) == 0) {
+        i = i << 1; ++pos;
+      }
+      return flag.Index * 32 + pos;
+    }
+  };
+
   internal sealed class PoolCollection {
     private const int MAX_COMPONENTS = Key.MAX_SIZE * 32;
-    private const uint LAST_BIT = 0x80000000;
 
     private readonly Dictionary<Type, int> registered = new();
     private int[] keyToTypeIndex = new int[World.INITIAL_CAPACITY];
     private Pool[] indexedPools = new Pool[World.INITIAL_CAPACITY];
+    private KeyFlag nextFlag = new(0, 1u);
 
-    private (int index, uint bits) next = (-1, LAST_BIT);
-    private (int index, uint bits) Next => next = next.bits != LAST_BIT
-      ? (next.index, next.bits << 1)
-      : (next.index + 1, 1u);
-
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Pool Pool<T>() where T : struct, IBaseComponent {
-      var typeIndex = TypeIndex.Get<T>();
-      if (!registered.ContainsKey(typeof(T))) {
-        typeIndex = Register<T>();
-      }
+      // Store index in a variable before indexing, as Register<T> might reallocate indexedPools.
+      var typeIndex = registered.ContainsKey(typeof(T)) ? TypeIndex.Get<T>() : Register<T>();
       return indexedPools[typeIndex];
     }
 
@@ -41,26 +49,26 @@ namespace ManulECS {
       return indexedPools[typeIndex];
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Pool PoolByKeyIndex(int index) => indexedPools[keyToTypeIndex[index]];
 
     internal void Clear() => Array.ForEach(indexedPools, pool => pool?.Reset());
 
     private int Register<T>() where T : struct, IBaseComponent {
-      var (index, bits) = Next;
-      (var keyIndex, var typeIndex) = (BitUtil.Position(index, bits), TypeIndex.Create<T>());
-      registered.Add(typeof(T), typeIndex);
-
-      if (keyIndex == MAX_COMPONENTS) {
+      if (nextFlag == MAX_COMPONENTS) {
         throw new Exception($"{MAX_COMPONENTS} component maximum exceeded!");
       }
 
-      EnsureSize(ref keyToTypeIndex, keyIndex);
+      var typeIndex = TypeIndex.Create<T>();
+      registered.Add(typeof(T), typeIndex);
+
+      EnsureSize(ref keyToTypeIndex, nextFlag);
       EnsureSize(ref indexedPools, typeIndex);
 
-      var key = new Key(index, bits);
-      Pool pool = World.IsTag(typeof(T)) ? new TagPool<T>(key) : new Pool<T>(key);
-      (keyToTypeIndex[keyIndex], indexedPools[typeIndex]) = (typeIndex, pool);
+      Pool pool = World.IsTag(typeof(T)) ? new TagPool<T>(nextFlag) : new Pool<T>(nextFlag);
+      (keyToTypeIndex[nextFlag], indexedPools[typeIndex]) = (typeIndex, pool);
 
+      nextFlag = nextFlag.Next;
       return typeIndex;
     }
   }

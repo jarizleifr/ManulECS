@@ -55,9 +55,9 @@ namespace ManulECS.Tests {
 
     [Fact]
     public void UpdatesCount_WhenEntityRemoved() {
-      var entities = world.Entities.ToList();
-      world.Remove(entities[0]);
-      Assert.Equal(entities.Count - 1, world.Count());
+      var count = world.Count();
+      world.Remove(world[0]);
+      Assert.Equal(count - 1, world.Count());
     }
 
     [Fact]

@@ -15,44 +15,44 @@ namespace ManulECS.Tests {
 
     [Fact]
     public void CountsEntities_WhenViewHasOneComponent() =>
-      Assert.Equal(30, world.View<Component1>().Count);
+      Assert.Equal(30, world.View<Component1>().Length);
 
     [Fact]
     public void CountsEntities_WhenViewHasTwoComponents() =>
-      Assert.Equal(20, world.View<Component1, Component2>().Count);
+      Assert.Equal(20, world.View<Component1, Component2>().Length);
 
     [Fact]
     public void CountsEntities_WhenViewHasThreeComponents() =>
-      Assert.Equal(10, world.View<Component1, Component2, Component3>().Count);
+      Assert.Equal(10, world.View<Component1, Component2, Component3>().Length);
 
     [Fact]
     public void UpdatesView_WhenComponentAdded() {
       var view = world.View<Component1, Component2>();
-      Assert.Equal(20, view.Count);
+      Assert.Equal(20, view.Length);
 
       world.Handle().Assign(new Component1 { }).Assign(new Component2 { });
       view = world.View<Component1, Component2>();
-      Assert.Equal(21, view.Count);
+      Assert.Equal(21, view.Length);
     }
 
     [Fact]
     public void UpdatesView_WhenComponentRemoved() {
       var e1 = world.Handle().Assign(new Component1 { }).Assign(new Component2 { });
       var view = world.View<Component1, Component2>();
-      Assert.Equal(21, view.Count);
+      Assert.Equal(21, view.Length);
 
       world.Remove(e1);
       view = world.View<Component1, Component2>();
-      Assert.Equal(20, view.Count);
+      Assert.Equal(20, view.Length);
     }
 
     [Fact]
     public void CachesView_WhenUsedFirstTime() {
       var key = world.Key<Component1>() + world.Key<Component2>();
-      Assert.False(world.viewCache.Contains(key));
+      Assert.False(world.views.ContainsKey(key));
 
       world.View<Component1, Component2>();
-      Assert.True(world.viewCache.Contains(key));
+      Assert.True(world.views.ContainsKey(key));
     }
 
     [Fact]
@@ -71,8 +71,8 @@ namespace ManulECS.Tests {
       foreach (var e in world.View<Component1, Component2>()) {
         world.Remove(e);
       }
-      Assert.Equal(10, world.View<Component1>().Count);
-      Assert.Equal(0, world.View<Component2>().Count);
+      Assert.Equal(10, world.View<Component1>().Length);
+      Assert.Equal(0, world.View<Component2>().Length);
     }
 
     [Fact]
@@ -80,8 +80,8 @@ namespace ManulECS.Tests {
       foreach (var e in world.View<Component1, Component2>()) {
         world.Remove<Component1>(e);
       }
-      Assert.Equal(10, world.View<Component1>().Count);
-      Assert.Equal(20, world.View<Component2>().Count);
+      Assert.Equal(10, world.View<Component1>().Length);
+      Assert.Equal(20, world.View<Component2>().Length);
     }
   }
 }

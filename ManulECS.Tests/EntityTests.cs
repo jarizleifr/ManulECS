@@ -40,28 +40,6 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void Gets_Entities() {
-      var e1 = world.Create();
-      var e2 = world.Create();
-      var e3 = world.Create();
-
-      Assert.Contains(e1, world.Entities);
-      Assert.Contains(e2, world.Entities);
-      Assert.Contains(e3, world.Entities);
-    }
-
-    [Fact]
-    public void Gets_OnlyAliveEntities() {
-      world.Create();
-      var entity = world.Create();
-      world.Create();
-
-      world.Remove(entity);
-
-      Assert.DoesNotContain(world.Entities, e => e.Id == entity.Id);
-    }
-
-    [Fact]
     public void Recycles_Entities() {
       world.Create();
       var entity = world.Create();

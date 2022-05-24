@@ -6,7 +6,7 @@ namespace ManulECS {
     internal const int MAX_SIZE = 4;
     private fixed uint u[MAX_SIZE];
 
-    internal Key(int index, uint bits) => u[index] = bits;
+    internal Key(uint index, uint bits) => u[index] = bits;
 
     internal bool this[Key flag] {
       [MethodImpl(MethodImplOptions.AggressiveInlining)]
