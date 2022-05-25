@@ -33,7 +33,9 @@ namespace ManulECS {
           }
         }
         count = 0;
-        EnsureSize(ref entities, smallest.Count, Entity.NULL_ENTITY);
+        if (entities.Length <= smallest.Count) {
+          ResizeAndFill(ref entities, smallest.Count, Entity.NULL_ENTITY);
+        }
         foreach (var entity in smallest.AsSpan()) {
           if (world.EntityKey(entity)[key]) {
             entities[count++] = entity;

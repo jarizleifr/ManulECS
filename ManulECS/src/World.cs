@@ -29,15 +29,15 @@ namespace ManulECS {
     public Entity Create() {
       Entity entity;
       if (destroyed == Entity.NULL_ID) {
-        entity = new(nextId, 0);
-        EnsureSize(ref entities, nextId, Entity.NULL_ENTITY);
-        EnsureSize(ref entityKeys, nextId);
-        (entities[nextId], entityKeys[nextId]) = (entity, default);
+        if (entities.Length <= nextId) {
+          ResizeAndFill(ref entities, (int)nextId, Entity.NULL_ENTITY);
+          Resize(ref entityKeys, (int)nextId);
+        }
+        (entities[nextId], entityKeys[nextId]) = (entity = new(nextId, 0), default);
         nextId++;
       } else {
         var (id, version) = entities[destroyed];
-        entity = new(destroyed, version);
-        (entities[destroyed], entityKeys[destroyed]) = (entity, default);
+        (entities[destroyed], entityKeys[destroyed]) = (entity = new(destroyed, version), default);
         destroyed = id;
       }
       count++;

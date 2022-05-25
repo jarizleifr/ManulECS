@@ -9,12 +9,12 @@ namespace ManulECS {
     internal KeyFlag Next => Bits != 0x8000_0000 ? new(Index, Bits << 1) : new(Index + 1, 1u);
 
     public static implicit operator Key(KeyFlag flag) => new(flag.Index, flag.Bits);
-    public static implicit operator uint(KeyFlag flag) {
+    public static implicit operator int(KeyFlag flag) {
       (int i, uint pos) = (1, 0);
       while ((i & flag.Bits) == 0) {
         i = i << 1; ++pos;
       }
-      return flag.Index * 32 + pos;
+      return (int)(flag.Index * 32 + pos);
     }
   };
 
@@ -66,8 +66,12 @@ namespace ManulECS {
       types.Add(typeof(T), typeIndex);
       registered.Add(typeIndex);
 
-      EnsureSize(ref keyToTypeIndex, nextFlag);
-      EnsureSize(ref indexedPools, typeIndex);
+      if (keyToTypeIndex.Length <= nextFlag) {
+        Resize(ref keyToTypeIndex, nextFlag);
+      }
+      if (indexedPools.Length <= typeIndex) {
+        Resize(ref indexedPools, typeIndex);
+      }
 
       Pool pool = World.IsTag(typeof(T)) ? new TagPool<T>(nextFlag) : new Pool<T>(nextFlag);
       (keyToTypeIndex[nextFlag], indexedPools[typeIndex]) = (typeIndex, pool);

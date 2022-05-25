@@ -22,12 +22,16 @@ namespace ManulECS {
 
     internal void Set(in Entity entity, T component) {
       var id = entity.Id;
-      EnsureSize(ref mapping, id, Entity.NULL_ID);
+      if (mapping.Length <= id) {
+        ResizeAndFill(ref mapping, (int)id, Entity.NULL_ID);
+      }
       ref var key = ref mapping[id];
       if (key == Entity.NULL_ID) {
         key = (uint)nextIndex;
-        EnsureSize(ref entities, nextIndex, Entity.NULL_ENTITY);
-        EnsureSize(ref components, nextIndex);
+        if (entities.Length <= nextIndex) {
+          ResizeAndFill(ref entities, nextIndex, Entity.NULL_ENTITY);
+          Resize(ref components, nextIndex);
+        }
         (entities[nextIndex], components[nextIndex]) = (entity, component);
         nextIndex++;
       } else {

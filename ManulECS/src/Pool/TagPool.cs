@@ -17,11 +17,15 @@ namespace ManulECS {
 
     internal void Set(in Entity entity) {
       var id = entity.Id;
-      EnsureSize(ref mapping, id, Entity.NULL_ID);
+      if (mapping.Length <= id) {
+        ResizeAndFill(ref mapping, (int)id, Entity.NULL_ID);
+      }
       ref var key = ref mapping[id];
       if (key == Entity.NULL_ID) {
         key = (uint)nextIndex;
-        EnsureSize(ref entities, nextIndex);
+        if (entities.Length <= nextIndex) {
+          Resize(ref entities, nextIndex);
+        }
         entities[nextIndex++] = entity;
         OnUpdate?.Invoke();
       }
