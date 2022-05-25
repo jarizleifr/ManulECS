@@ -37,7 +37,7 @@ namespace ManulECS {
       } else {
         (entities[key], components[key]) = (entity, component);
       }
-      OnUpdate?.Invoke();
+      onUpdate?.Invoke();
     }
 
     internal override void SetObject(in Entity entity, object component) =>
@@ -53,7 +53,7 @@ namespace ManulECS {
             mapping[entities[nextIndex].Id] = key;
           }
           key = Entity.NULL_ID;
-          OnUpdate?.Invoke();
+          onUpdate?.Invoke();
         }
       }
     }
@@ -66,7 +66,7 @@ namespace ManulECS {
     internal override void Clear() {
       Array.Fill(mapping, Entity.NULL_ID);
       nextIndex = 0;
-      OnUpdate?.Invoke();
+      onUpdate?.Invoke();
     }
 
     internal override void Reset() {
@@ -75,7 +75,7 @@ namespace ManulECS {
       nextIndex = 0;
       entities = new Entity[World.INITIAL_CAPACITY];
       components = new T[World.INITIAL_CAPACITY];
-      OnUpdate?.Invoke();
+      onUpdate?.Invoke();
     }
   }
 }

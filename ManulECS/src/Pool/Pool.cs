@@ -9,7 +9,13 @@ namespace ManulECS {
     internal string Profile { get; init; } = null;
 
     internal Key Key { get; init; }
-    internal Action OnUpdate { get; set; }
+
+    protected Action onUpdate;
+    internal Action OnUpdate {
+      get => onUpdate;
+      set => onUpdate = value;
+    }
+
     internal int Count => nextIndex;
     internal int Capacity => entities.Length;
 
