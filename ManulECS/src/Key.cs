@@ -2,7 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 
 namespace ManulECS {
-  internal unsafe struct Key : IEquatable<Key> {
+  internal unsafe record struct Key : IEquatable<Key> {
     internal const int MAX_SIZE = 4;
     private fixed uint u[MAX_SIZE];
 
@@ -20,9 +20,6 @@ namespace ManulECS {
       }
       return true;
     }
-
-    public static bool operator ==(Key left, Key right) => left.Equals(right);
-    public static bool operator !=(Key left, Key right) => !(left == right);
 
     public static Key operator +(Key left, Key right) {
       Key key;
@@ -46,13 +43,11 @@ namespace ManulECS {
       return true;
     }
 
-    public override bool Equals(object obj) => obj is Key flags && Equals(flags);
-
     public override int GetHashCode() {
       unchecked {
         int hash = 17;
         for (int i = 0; i < MAX_SIZE; i++) {
-          hash = hash * 31 + u[i].GetHashCode();
+          hash = hash * 29 + u[i].GetHashCode();
         }
         return hash;
       }
