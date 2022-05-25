@@ -29,6 +29,9 @@ namespace ManulECS {
     public Entity Create() {
       Entity entity;
       if (destroyed == Entity.NULL_ID) {
+        if (nextId == Entity.NULL_ID) {
+          throw new Exception("FATAL ERROR: Max number of entities exceeded!");
+        }
         if (entities.Length <= nextId) {
           ResizeAndFill(ref entities, (int)nextId, Entity.NULL_ENTITY);
           Resize(ref entityKeys, (int)nextId);

@@ -6,7 +6,7 @@ namespace ManulECS {
     public static readonly Entity NULL_ENTITY = new(NULL_ID, 0);
     public const uint NULL_ID = 0xFFFFFF;
 
-    internal readonly uint uuid = NULL_ID;
+    internal readonly uint uuid;
 
     internal uint Id {
       [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -14,11 +14,7 @@ namespace ManulECS {
     }
     internal byte Version => (byte)uuid;
 
-    internal Entity(uint id, byte version) {
-      if (id > NULL_ID) throw new Exception("FATAL ERROR: Max number of entities exceeded!");
-      uuid = id << 8 | version;
-    }
-
+    internal Entity(uint id, byte version) => uuid = id << 8 | version;
     internal Entity(uint uuid) => this.uuid = uuid;
 
     internal void Deconstruct(out uint id, out byte version) {
