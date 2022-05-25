@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -19,10 +20,12 @@ namespace ManulECS {
   };
 
   internal sealed class PoolCollection {
-    private const int MAX_COMPONENTS = Key.MAX_SIZE * 32;
+    private const int MAX_LOCAL_TYPES = Key.MAX_SIZE * 32;
+    internal const int MAX_GLOBAL_TYPES = TypeIndex.MAX_INDEX;
 
     private readonly Dictionary<Type, int> types = new();
-    private readonly HashSet<int> registered = new();
+    private readonly BitArray registered = new(MAX_GLOBAL_TYPES);
+
     private int[] keyToTypeIndex = new int[World.INITIAL_CAPACITY];
     private Pool[] indexedPools = new Pool[World.INITIAL_CAPACITY];
     private KeyFlag nextFlag = new(0, 1u);
@@ -30,7 +33,7 @@ namespace ManulECS {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Pool Pool<T>() where T : struct, IBaseComponent {
       var typeIndex = TypeIndex.Get<T>();
-      if (!registered.Contains(typeIndex) ){
+      if (typeIndex == TypeIndex.MAX_INDEX || !registered[typeIndex]) {
         typeIndex = Register<T>();
       }
       return indexedPools[typeIndex];
@@ -58,13 +61,17 @@ namespace ManulECS {
     internal void Clear() => Array.ForEach(indexedPools, pool => pool?.Reset());
 
     private int Register<T>() where T : struct, IBaseComponent {
-      if (nextFlag == MAX_COMPONENTS) {
-        throw new Exception($"{MAX_COMPONENTS} component maximum exceeded!");
+      var typeIndex = TypeIndex.Create<T>();
+
+      if (nextFlag == MAX_LOCAL_TYPES) {
+        throw new Exception($"World local maximum component limit ({MAX_LOCAL_TYPES}) exceeded!");
+      }
+      if (typeIndex == MAX_GLOBAL_TYPES) {
+        throw new Exception($"Global maximum component limit ({MAX_GLOBAL_TYPES}) exceeded!");
       }
 
-      var typeIndex = TypeIndex.Create<T>();
       types.Add(typeof(T), typeIndex);
-      registered.Add(typeIndex);
+      registered[typeIndex] = true;
 
       if (keyToTypeIndex.Length <= nextFlag) {
         Resize(ref keyToTypeIndex, nextFlag);

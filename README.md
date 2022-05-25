@@ -1,28 +1,37 @@
 # ManulECS
 
-An Entity-Component-System and a simple shared resource manager for C#, inspired by DefaultEcs, minECS, specs and Entt.
+An Entity-Component-System and a simple shared resource manager for C#, inspired by minECS, specs and Entt.
 
 I wrote a library called ManulEC in 2019 for my roguelike game to provide simple runtime composition similar to Unity, but it had obvious flaws and performance issues. Thus, a need for ManulECS had arisen and I decided to write a new library from scratch, using structs and sparse sets.
 
-## Features
+## Features and technical details
 
 ### Focus on simplicity
 
-Simplicity as in simple to understand, this has been a huge learning opportunity for myself and I've purposefully tried to keep things as clean as possible. There are bound to be more feature-rich and more performant ECS implementations out there, but my implementation does its job in less than 1000 lines of code, comments and tests notwithstanding.
+I've tried to keep ManulECS as light and simple as possible, while still managing competetive single-thread performance with other libraries of the same sort. There are bound to be more feature-rich and more performant ECS implementations out there, but mine does its job in less than 900 lines of code, comments, blanks and tests notwithstanding.
 
-Out-of-the-box, there are no system classes to override, no code generation, no events, no parallelism. Just the core functionality for composition, iteration and serialization. If you want more exotic features, you can write your own wrappers around ManulECS.
+Out-of-the-box, there are no system classes to override, no code generation, no events, no parallelism. Just the core functionality for composition, iteration and serialization.
 
-### Sparse Sets
+### Sparse sets of components
 
-Under the hood, ManulECS uses sparse sets of structs to achieve data locality.
+Under the hood, ManulECS uses sparse sets of structs to achieve data locality. The main building blocks we need to care about, are as follows:
 
-### Components, Tags and Resources
+- **Entity**, a simple 4-byte value that is used to index components
+- **Component**, a regular data-holding struct
+- **Tag**, a boolean flag, which don't contain data
+- **Resource**, singleton class that exists outside the sphere of entities
 
-There's support for **Components** (regular structs), **Tags** (boolean flags) and **Resources** (classes outside the sphere of entities). 
+A collection of entities having a certain configuration of components and tags is called a View, which 
 
 ### Serialization
 
-There's support for custom serializers, although the process is a bit involved. A serializer for JSON format has been included in the project.
+There's a JSON serializer included in the project, there's also support for custom serializers, although the process is a bit involved.
+
+### Limitations, known issues
+
+Entities are limited by unsigned 3-byte value, meaning the maximum number of entities is 16777215.
+
+For components and tags, there's currently a 256 limit per World, but you can have up to 512 components in total, if you use different sets of components in different worlds. These are arbitrary constants, ManulECS works fine with any values, but increasing these will come with a performance cost.
 
 ## Overview
 
@@ -122,7 +131,7 @@ world.SetResource(level);
 var level = world.GetResource<Level>();
 ```
 
-### Systems
+### Views
 
 ManulECS is not opinionated on how to build systems. Instead, ManulECS provides a View of Entities that we can iterate through with a foreach loop. Views are automatically updated on iteration if the related component pool has been modified.
 
