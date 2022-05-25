@@ -21,21 +21,24 @@ namespace ManulECS {
   internal sealed class PoolCollection {
     private const int MAX_COMPONENTS = Key.MAX_SIZE * 32;
 
-    private readonly Dictionary<Type, int> registered = new();
+    private readonly Dictionary<Type, int> types = new();
+    private readonly HashSet<int> registered = new();
     private int[] keyToTypeIndex = new int[World.INITIAL_CAPACITY];
     private Pool[] indexedPools = new Pool[World.INITIAL_CAPACITY];
     private KeyFlag nextFlag = new(0, 1u);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Pool Pool<T>() where T : struct, IBaseComponent {
-      // Store index in a variable before indexing, as Register<T> might reallocate indexedPools.
-      var typeIndex = registered.ContainsKey(typeof(T)) ? TypeIndex.Get<T>() : Register<T>();
+      var typeIndex = TypeIndex.Get<T>();
+      if (!registered.Contains(typeIndex) ){
+        typeIndex = Register<T>();
+      }
       return indexedPools[typeIndex];
     }
 
     /// <summary>Gets a Pool by its runtime type.</summary>
     internal Pool PoolByType(Type type) {
-      if (!registered.TryGetValue(type, out var typeIndex)) {
+      if (!types.TryGetValue(type, out var typeIndex)) {
         /* If the Pool for the current Type hasn't been registered and cached yet, we need to use
          * reflection to invoke the Register method, as we don't know the generic type in this case.
          *
@@ -60,7 +63,8 @@ namespace ManulECS {
       }
 
       var typeIndex = TypeIndex.Create<T>();
-      registered.Add(typeof(T), typeIndex);
+      types.Add(typeof(T), typeIndex);
+      registered.Add(typeIndex);
 
       EnsureSize(ref keyToTypeIndex, nextFlag);
       EnsureSize(ref indexedPools, typeIndex);
