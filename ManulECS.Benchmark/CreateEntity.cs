@@ -24,39 +24,36 @@ namespace ManulECS.Benchmark {
     }
 
     [Benchmark]
-    public void CreateEntitiesWith1Component() => CreateWith1Component<Pos>();
-
-    [Benchmark]
-    public void CreateEntitiesWith2Components() => CreateWith2Components<Pos, Move>();
-
-    [Benchmark]
-    public void CreateEntitiesWith1Tag() => CreateWith1Tag<Tag1>();
-
-    [Benchmark]
-    public void CreateEntitiesWith2Tags() => CreateWith2Tags<Tag1, Tag2>();
-
-    private void CreateWith1Component<T>() where T : struct, IComponent {
+    public void CreateEntitiesWith1Component() {
       for (int i = 0; i < N; i++) {
-        world.Handle().Assign<T>(new());
+        var entity = world.Create();
+        world.Assign<Pos>(entity, new());
       }
     }
-    private void CreateWith2Components<T1, T2>()
-      where T1 : struct, IComponent
-      where T2 : struct, IComponent {
+
+    [Benchmark]
+    public void CreateEntitiesWith2Components() {
       for (int i = 0; i < N; i++) {
-        world.Handle().Assign<T1>(new()).Assign<T2>(new());
+        var entity = world.Create();
+        world.Assign<Pos>(entity, new());
+        world.Assign<Move>(entity, new());
       }
     }
-    private void CreateWith1Tag<T>() where T : struct, ITag {
+
+    [Benchmark]
+    public void CreateEntitiesWith1Tag() {
       for (int i = 0; i < N; i++) {
-        world.Handle().Tag<T>();
+        var entity = world.Create();
+        world.Tag<Tag1>(entity);
       }
     }
-    private void CreateWith2Tags<T1, T2>()
-      where T1 : struct, ITag
-      where T2 : struct, ITag {
+
+    [Benchmark]
+    public void CreateEntitiesWith2Tags() {
       for (int i = 0; i < N; i++) {
-        world.Handle().Tag<T1>().Tag<T2>();
+        var entity = world.Create();
+        world.Tag<Tag1>(entity);
+        world.Tag<Tag2>(entity);
       }
     }
   }
