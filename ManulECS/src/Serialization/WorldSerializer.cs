@@ -76,7 +76,7 @@ namespace ManulECS {
             foreach (var idx in world.EntityKey(id)) {
               // Skip already checked components
               if (idx > componentIndex) {
-                var pool = world.pools.PoolByKeyIndex(idx);
+                var pool = world.PoolByKeyIndex(idx);
                 if (pool.Omit != Omit.Component) {
                   // Update previous only if we have actually looped components 
                   if (componentIndex != -1) {
@@ -104,7 +104,7 @@ namespace ManulECS {
         if (!world.IsValid(id)) return true;
         string componentProfile = null;
         foreach (var idx in world.EntityKey(id)) {
-          var pool = world.pools.PoolByKeyIndex(idx);
+          var pool = world.PoolByKeyIndex(idx);
           if (pool.Omit == Omit.Entity) {
             return true;
           } else if (componentProfile == null) {

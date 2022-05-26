@@ -6,14 +6,13 @@ using static ManulECS.ArrayUtil;
 namespace ManulECS {
   public partial class World {
     private uint destroyed = Entity.NULL_ID;
-    private uint nextId = 0;
-    private uint count = 0;
+    private uint nextId = 0, count = 0;
 
     private Entity[] entities = new Entity[Constants.INITIAL_CAPACITY];
     private Key[] entityKeys = new Key[Constants.INITIAL_CAPACITY];
 
+    private readonly PoolCollection pools = new();
     internal readonly Dictionary<Type, object> resources = new();
-    internal readonly PoolCollection pools = new();
     internal readonly Dictionary<Key, View> views = new();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -59,7 +58,7 @@ namespace ManulECS {
       if (IsValid(id)) {
         ref var key = ref EntityKey(id);
         foreach (var idx in key) {
-          pools.PoolByKeyIndex(idx).Remove(id);
+          PoolByKeyIndex(idx).Remove(id);
         }
         var (destroyedId, version) = entity;
         (entities[id], key) = (new(destroyed, ++version), default);
@@ -168,7 +167,7 @@ namespace ManulECS {
       ref var cloneFlags = ref EntityKey(cloneId);
       cloneFlags = EntityKey(id);
       foreach (var idx in cloneFlags) {
-        var pool = pools.PoolByKeyIndex(idx);
+        var pool = PoolByKeyIndex(idx);
         pool.Clone(id, cloneId);
       }
       return clone;
@@ -244,5 +243,8 @@ namespace ManulECS {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal TagPool<T> TagPool<T>() where T : struct, ITag => (TagPool<T>)pools.Pool<T>();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal Pool PoolByKeyIndex(int index) => pools.PoolByKeyIndex(index);
   }
 }

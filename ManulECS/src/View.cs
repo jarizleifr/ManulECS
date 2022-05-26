@@ -15,7 +15,7 @@ namespace ManulECS {
     internal View(World world, Key key) {
       this.key = key;
       foreach (var idx in key) {
-        var pool = world.pools.PoolByKeyIndex(idx);
+        var pool = world.PoolByKeyIndex(idx);
         pool.OnUpdate += SetToDirty;
       }
     }
@@ -27,7 +27,7 @@ namespace ManulECS {
       if (dirty) {
         Pool smallest = null;
         foreach (var idx in key) {
-          var pool = world.pools.PoolByKeyIndex(idx);
+          var pool = world.PoolByKeyIndex(idx);
           if (smallest == null || smallest.Count > pool.Count) {
             smallest = pool;
           }

@@ -14,7 +14,7 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-      public void Creates_MultipleWorlds() {
+    public void Creates_MultipleWorlds() {
       var otherWorld = new World();
       for (int i = 0; i < 10; i++) {
         otherWorld.Handle().Assign(new Component1 { });
@@ -93,16 +93,16 @@ namespace ManulECS.Tests {
     public void Tags() {
       Entity e = world.Handle().Tag<Tag>();
       Assert.True(world.Has<Tag>(e));
-       Assert.True(world.EntityKey(e.Id)[world.Key<Tag>()]);
+      Assert.True(world.EntityKey(e.Id)[world.Key<Tag>()]);
     }
 
     [Fact]
     public void Untags() {
       Entity e = world.Handle().Tag<Tag>();
       Assert.True(world.Has<Tag>(e));
-       Assert.True(world.EntityKey(e.Id)[world.Key<Tag>()]);
+      Assert.True(world.EntityKey(e.Id)[world.Key<Tag>()]);
 
-       world.Remove<Tag>(e);
+      world.Remove<Tag>(e);
       Assert.False(world.Has<Tag>(e));
       Assert.False(world.EntityKey(e.Id)[world.Key<Tag>()]);
     }

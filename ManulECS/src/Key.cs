@@ -43,39 +43,37 @@ namespace ManulECS {
 
     public override int GetHashCode() {
       unchecked {
-        int hash = 17;
+        uint hash = 17;
         for (int i = 0; i < MAX_SIZE; i++) {
-          hash = hash * 29 + u[i].GetHashCode();
+          hash = hash * 29 + u[i];
         }
-        return hash;
+        return (int)hash;
       }
-     }
+    }
 
-     public struct FlagEnumerator {
-       private readonly Key key;
-       private int i, j;
+    public FlagEnumerator GetEnumerator() => new(this);
 
-       internal FlagEnumerator(Key key) =>
-         (this.key, i, j) = (key, 0, -1);
+    public struct FlagEnumerator {
+      private readonly Key key;
+      private int i, j;
 
-       public int Current => i * 32 + j;
+      internal FlagEnumerator(Key key) => (this.key, i, j) = (key, 0, -1);
 
-       public bool MoveNext() {
-         while (i < MAX_SIZE) {
-           if (++j < 32) {
-             if ((key.u[i] & 1u << j) != 0) {
-               return true;
-             }
-           } else {
-             j = -1;
-             i++;
-             continue;
-           }
-         }
-         return false;
-       }
-     }
+      public int Current => i * 32 + j;
 
-     public FlagEnumerator GetEnumerator() => new(this);
+      public bool MoveNext() {
+        while (i < MAX_SIZE) {
+          if (++j < 32) {
+            if ((key.u[i] & 1u << j) != 0) {
+              return true;
+            }
+          } else {
+            j = -1;
+            i++;
+          }
+        }
+        return false;
+      }
+    }
   }
 }
