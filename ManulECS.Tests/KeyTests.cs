@@ -33,7 +33,7 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void IsSubsetOf() {
+    public void GetsSubset() {
       var flag1 = new Key(0, 1);
       var flag2 = new Key(0, 8);
       var flag3 = new Key(1, 128);
@@ -41,8 +41,8 @@ namespace ManulECS.Tests {
       var key1 = flag1 + flag2 + flag3;
       var key2 = flag1 + flag3;
 
-      Assert.True(key1.IsSubsetOf(key2));
-      Assert.False(key2.IsSubsetOf(key1));
+      Assert.True(key1[key2]);
+      Assert.False(key2[key1]);
     }
 
     [Fact]

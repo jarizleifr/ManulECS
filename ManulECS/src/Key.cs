@@ -8,17 +8,14 @@ namespace ManulECS {
 
     internal Key(uint index, uint bits) => u[index] = bits;
 
-    internal bool this[Key flag] {
+    internal bool this[Key key] {
       [MethodImpl(MethodImplOptions.AggressiveInlining)]
-      get => IsSubsetOf(flag);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal bool IsSubsetOf(Key filter) {
-      for (int i = 0; i < MAX_SIZE; i++) {
-        if ((u[i] & filter.u[i]) != filter.u[i]) return false;
+      get {
+        for (int i = 0; i < MAX_SIZE; i++) {
+          if ((u[i] & key.u[i]) != key.u[i]) return false;
+        }
+        return true;
       }
-      return true;
     }
 
     public static Key operator +(Key left, Key right) {
@@ -28,6 +25,7 @@ namespace ManulECS {
       }
       return key;
     }
+
     public static Key operator -(Key left, Key right) {
       Key key;
       for (int i = 0; i < MAX_SIZE; i++) {
