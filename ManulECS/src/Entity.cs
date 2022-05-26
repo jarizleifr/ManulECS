@@ -31,7 +31,7 @@ namespace ManulECS {
     public override bool Equals(object obj) =>
       obj is Entity entity && Equals(entity);
 
-    public override int GetHashCode() => uuid.GetHashCode();
+    public override int GetHashCode() => (int)uuid;
   }
 
   public readonly struct EntityHandle {

@@ -9,38 +9,36 @@ namespace ManulECS {
 
     internal TagPool(in Key key) : base(key, ECSSerializeAttribute.GetAttribute(typeof(T))) { }
 
-    internal override object Get(in Entity _) => dummy;
+    internal override object Get(uint _) => dummy;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal override bool Has(in Entity entity) =>
-      entity.Id < mapping.Length && mapping[entity.Id] != Entity.NULL_ID;
+    internal override bool Has(uint id) =>
+      id < mapping.Length && mapping[id] != Entity.NULL_ID;
 
-    internal void Set(in Entity entity) {
-      var id = entity.Id;
+    internal void Set(uint id) {
       if (mapping.Length <= id) {
         ResizeAndFill(ref mapping, (int)id, Entity.NULL_ID);
       }
       ref var key = ref mapping[id];
       if (key == Entity.NULL_ID) {
         key = (uint)nextIndex;
-        if (entities.Length <= nextIndex) {
-          Resize(ref entities, nextIndex);
+        if (ids.Length <= nextIndex) {
+          Resize(ref ids, nextIndex);
         }
-        entities[nextIndex++] = entity;
+        ids[nextIndex++] = id;
         onUpdate?.Invoke();
       }
     }
 
-    internal override void SetObject(in Entity entity, object _) => Set(entity);
+    internal override void SetObject(uint id, object _) => Set(id);
 
-    internal override void Remove(in Entity entity) {
-      var id = entity.Id;
+    internal override void Remove(uint id) {
       if (id < mapping.Length) {
         ref var key = ref mapping[id];
         if (key != Entity.NULL_ID) {
           if (key < --nextIndex) {
-            entities[key] = entities[nextIndex];
-            mapping[entities[nextIndex].Id] = key;
+            ids[key] = ids[nextIndex];
+            mapping[ids[nextIndex]] = key;
           }
           key = Entity.NULL_ID;
           onUpdate?.Invoke();
@@ -48,11 +46,11 @@ namespace ManulECS {
       }
     }
 
-    internal override void Clone(in Entity origin, in Entity target) {
-      if (Has(origin)) {
-        Set(target);
+    internal override void Clone(uint originId, uint targetId) {
+      if (Has(originId)) {
+        Set(targetId);
       } else {
-        Remove(target);
+        Remove(targetId);
       }
     }
 
@@ -66,7 +64,7 @@ namespace ManulECS {
       mapping = new uint[World.INITIAL_CAPACITY];
       Array.Fill(mapping, Entity.NULL_ID);
       nextIndex = 0;
-      entities = new Entity[World.INITIAL_CAPACITY];
+      ids = new uint[World.INITIAL_CAPACITY];
       onUpdate?.Invoke();
     }
   }

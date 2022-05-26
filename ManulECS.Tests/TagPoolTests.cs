@@ -16,7 +16,7 @@ namespace ManulECS.Tests {
       var entities = new List<Entity>();
       for (uint i = 0; i < count; i++) {
         var entity = new Entity(i, 0);
-        pool.Set(entity);
+        pool.Set(entity.Id);
         entities.Add(entity);
       }
       return entities;
@@ -31,18 +31,18 @@ namespace ManulECS.Tests {
     [Fact]
     public void SetsTag() {
       var entities = CreateTestEntities(3);
-      Assert.True(pool.Has(entities[2]));
+      Assert.True(pool.Has(entities[2].Id));
     }
 
     [Fact]
     public void SetsObject() {
       var e1 = new Entity(0, 0);
       var e2 = new Entity(1, 0);
-      untypedPool.SetObject(e1, null);
-      untypedPool.SetObject(e2, null);
+      untypedPool.SetObject(e1.Id, null);
+      untypedPool.SetObject(e2.Id, null);
       Assert.Equal(2, untypedPool.Count);
-      Assert.True(pool.Has(e1));
-      Assert.True(pool.Has(e2));
+      Assert.True(pool.Has(e1.Id));
+      Assert.True(pool.Has(e2.Id));
     }
 
     [Fact]

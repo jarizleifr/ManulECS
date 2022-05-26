@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using Xunit;
 
 namespace ManulECS.Tests {
@@ -66,46 +65,46 @@ namespace ManulECS.Tests {
       world.Assign(e, new Component1 { value = 100u });
       var comp = world.Get<Component1>(e);
       Assert.Equal(100u, comp.value);
-      Assert.True(world.EntityKey(e)[world.Key<Component1>()]);
+      Assert.True(world.EntityKey(e.Id)[world.Key<Component1>()]);
     }
 
     [Fact]
     public void PatchesComponent() {
-      var e = world.Handle().Assign(new Component1 { value = 100u });
+      Entity e = world.Handle().Assign(new Component1 { value = 100u });
       world.Patch(e, new Component1 { value = 200u });
 
       var comp = world.Get<Component1>(e);
       Assert.Equal(200u, comp.value);
-      Assert.True(world.EntityKey(e)[world.Key<Component1>()]);
+      Assert.True(world.EntityKey(e.Id)[world.Key<Component1>()]);
     }
 
     [Fact]
     public void RemovesComponent() {
-      var e = world.Handle().Assign(new Component1 { value = 100u });
+      Entity e = world.Handle().Assign(new Component1 { value = 100u });
       Assert.True(world.Has<Component1>(e));
-      Assert.True(world.EntityKey(e)[world.Key<Component1>()]);
+      Assert.True(world.EntityKey(e.Id)[world.Key<Component1>()]);
 
       world.Remove<Component1>(e);
       Assert.False(world.Has<Component1>(e));
-      Assert.False(world.EntityKey(e)[world.Key<Component1>()]);
+      Assert.False(world.EntityKey(e.Id)[world.Key<Component1>()]);
     }
 
     [Fact]
     public void Tags() {
-      var e = world.Handle().Tag<Tag>();
+      Entity e = world.Handle().Tag<Tag>();
       Assert.True(world.Has<Tag>(e));
-      Assert.True(world.EntityKey(e)[world.Key<Tag>()]);
+       Assert.True(world.EntityKey(e.Id)[world.Key<Tag>()]);
     }
 
     [Fact]
     public void Untags() {
-      var e = world.Handle().Tag<Tag>();
+      Entity e = world.Handle().Tag<Tag>();
       Assert.True(world.Has<Tag>(e));
-      Assert.True(world.EntityKey(e)[world.Key<Tag>()]);
+       Assert.True(world.EntityKey(e.Id)[world.Key<Tag>()]);
 
-      world.Remove<Tag>(e);
+       world.Remove<Tag>(e);
       Assert.False(world.Has<Tag>(e));
-      Assert.False(world.EntityKey(e)[world.Key<Tag>()]);
+      Assert.False(world.EntityKey(e.Id)[world.Key<Tag>()]);
     }
 
     [Fact]
@@ -116,7 +115,7 @@ namespace ManulECS.Tests {
       var comp = world.Get<Component1>(e);
       Assert.Equal(100u, comp.value);
       Assert.True(world.Has<Tag>(e));
-      Assert.True(world.EntityKey(e)[world.Key<Tag>()]);
+      Assert.True(world.EntityKey(e.Id)[world.Key<Tag>()]);
     }
 
     [Fact]

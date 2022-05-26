@@ -36,9 +36,9 @@ namespace ManulECS {
         if (entities.Length <= smallest.Count) {
           ResizeAndFill(ref entities, smallest.Count, Entity.NULL_ENTITY);
         }
-        foreach (var entity in smallest.AsSpan()) {
-          if (world.EntityKey(entity)[key]) {
-            entities[count++] = entity;
+        foreach (var id in smallest.AsSpan()) {
+          if (world.EntityKey(id)[key]) {
+            entities[count++] = world[id];
           }
         }
         dirty = false;

@@ -12,7 +12,7 @@ namespace ManulECS.Tests {
       var entities = new List<Entity>();
       for (uint i = 0; i < count; i++) {
         var entity = new Entity(i, 0);
-        pool.Set(entity, Value(i));
+        pool.Set(entity.Id, Value(i));
         entities.Add(entity);
       }
       return entities;
@@ -32,7 +32,7 @@ namespace ManulECS.Tests {
     [Fact]
     public void UpdatesValue_OnSet() {
       var entity = CreateTestEntities(3)[2];
-      pool.Set(entity, Value(300));
+      pool.Set(entity.Id, Value(300));
       Assert.Equal(300u, pool[entity].value);
     }
 
@@ -56,17 +56,17 @@ namespace ManulECS.Tests {
     public void SetsUntypedComponent() {
       var e1 = new Entity(0, 0);
       var e2 = new Entity(1, 0);
-      untypedPool.SetObject(e1, new Component1 { value = 1 });
-      untypedPool.SetObject(e2, new Component1 { value = 2 });
+      untypedPool.SetObject(e1.Id, new Component1 { value = 1 });
+      untypedPool.SetObject(e2.Id, new Component1 { value = 2 });
       Assert.Equal(2, untypedPool.Count);
-      Assert.Equal(1u, ((Component1)untypedPool.Get(e1)).value);
-      Assert.Equal(2u, ((Component1)untypedPool.Get(e2)).value);
+      Assert.Equal(1u, ((Component1)untypedPool.Get(e1.Id)).value);
+      Assert.Equal(2u, ((Component1)untypedPool.Get(e2.Id)).value);
     }
 
     [Fact]
     public void GetsCorrectValue_AfterReplacingIntermediateWithLast() {
       var entities = CreateTestEntities(3);
-      pool.Remove(entities[0]);
+      pool.Remove(entities[0].Id);
       Assert.Equal(2u, pool[entities[2]].value);
     }
 
@@ -91,7 +91,7 @@ namespace ManulECS.Tests {
       var entity = CreateTestEntities(3)[1];
       bool called = false;
       untypedPool.OnUpdate += () => called = true;
-      untypedPool.Remove(entity);
+      untypedPool.Remove(entity.Id);
       Assert.True(called);
     }
 
@@ -105,7 +105,7 @@ namespace ManulECS.Tests {
     [Fact]
     public void UpdatesCount_OnRemovingLastValue() {
       var entities = CreateTestEntities(3);
-      untypedPool.Remove(entities[2]);
+      untypedPool.Remove(entities[2].Id);
       Assert.Equal(2, untypedPool.Count);
     }
 
@@ -113,8 +113,8 @@ namespace ManulECS.Tests {
     public void Gets_Indices() {
       CreateTestEntities(3);
       var list = new List<uint>();
-      foreach (var e in untypedPool.AsSpan()) {
-        list.Add(e.Id);
+      foreach (var id in untypedPool.AsSpan()) {
+        list.Add(id);
       }
       Assert.Contains(0u, list);
       Assert.Contains(1u, list);
@@ -125,12 +125,12 @@ namespace ManulECS.Tests {
     [Fact]
     public void Gets_OnlyAliveIndices() {
       var entities = CreateTestEntities(5);
-      untypedPool.Remove(entities[0]);
-      untypedPool.Remove(entities[1]);
-      untypedPool.Remove(entities[3]);
+      untypedPool.Remove(entities[0].Id);
+      untypedPool.Remove(entities[1].Id);
+      untypedPool.Remove(entities[3].Id);
       var list = new List<uint>();
-      foreach (var e in untypedPool.AsSpan()) {
-        list.Add(e.Id);
+      foreach (var id in untypedPool.AsSpan()) {
+        list.Add(id);
       }
       Assert.Equal(2, list.Count);
       Assert.Contains(2u, list);
@@ -167,8 +167,8 @@ namespace ManulECS.Tests {
       CreateTestEntities(5);
       untypedPool.Reset();
       var list = new List<uint>();
-      foreach (var e in untypedPool.AsSpan()) {
-        list.Add(e.Id);
+      foreach (var id in untypedPool.AsSpan()) {
+        list.Add(id);
       }
       Assert.Empty(list);
       Assert.Equal(0, untypedPool.Count);

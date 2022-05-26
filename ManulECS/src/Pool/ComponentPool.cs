@@ -15,42 +15,39 @@ namespace ManulECS {
       get => ref components[mapping[entity.Id]];
     }
 
-    internal override bool Has(in Entity entity) =>
-      entity.Id < mapping.Length && mapping[entity.Id] != Entity.NULL_ID;
+    internal override bool Has(uint id) => id < mapping.Length && mapping[id] != Entity.NULL_ID;
 
-    internal void Set(in Entity entity) => Set(entity, default);
+    internal void Set(uint id) => Set(id, default);
 
-    internal void Set(in Entity entity, T component) {
-      var id = entity.Id;
+    internal void Set(uint id, T component) {
       if (mapping.Length <= id) {
         ResizeAndFill(ref mapping, (int)id, Entity.NULL_ID);
       }
       ref var key = ref mapping[id];
       if (key == Entity.NULL_ID) {
         key = (uint)nextIndex;
-        if (entities.Length <= nextIndex) {
-          ResizeAndFill(ref entities, nextIndex, Entity.NULL_ENTITY);
+        if (ids.Length <= nextIndex) {
+          ResizeAndFill(ref ids, nextIndex, Entity.NULL_ID);
           Resize(ref components, nextIndex);
         }
-        (entities[nextIndex], components[nextIndex]) = (entity, component);
+        (ids[nextIndex], components[nextIndex]) = (id, component);
         nextIndex++;
       } else {
-        (entities[key], components[key]) = (entity, component);
+        (ids[key], components[key]) = (id, component);
       }
       onUpdate?.Invoke();
     }
 
-    internal override void SetObject(in Entity entity, object component) =>
-      Set(entity, (T)component);
+    internal override void SetObject(uint id, object component) =>
+      Set(id, (T)component);
 
-    internal override void Remove(in Entity entity) {
-      var id = entity.Id;
+    internal override void Remove(uint id) {
       if (id < mapping.Length) {
         ref var key = ref mapping[id];
         if (key != Entity.NULL_ID) {
           if (key < --nextIndex) {
-            (entities[key], components[key]) = (entities[nextIndex], components[nextIndex]);
-            mapping[entities[nextIndex].Id] = key;
+            (ids[key], components[key]) = (ids[nextIndex], components[nextIndex]);
+            mapping[ids[nextIndex]] = key;
           }
           key = Entity.NULL_ID;
           onUpdate?.Invoke();
@@ -58,10 +55,10 @@ namespace ManulECS {
       }
     }
 
-    internal override object Get(in Entity entity) => Has(entity) ? this[entity] : null;
+    internal override object Get(uint id) => Has(id) ? components[mapping[id]] : null;
 
-    internal override void Clone(in Entity origin, in Entity target) =>
-      Set(target, this[origin]);
+    internal override void Clone(uint originId, uint targetId) =>
+      Set(targetId, components[mapping[originId]]);
 
     internal override void Clear() {
       Array.Fill(mapping, Entity.NULL_ID);
@@ -73,7 +70,7 @@ namespace ManulECS {
       mapping = new uint[World.INITIAL_CAPACITY];
       Array.Fill(mapping, Entity.NULL_ID);
       nextIndex = 0;
-      entities = new Entity[World.INITIAL_CAPACITY];
+      ids = new uint[World.INITIAL_CAPACITY];
       components = new T[World.INITIAL_CAPACITY];
       onUpdate?.Invoke();
     }

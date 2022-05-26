@@ -17,7 +17,7 @@ namespace ManulECS {
     public ECSSerializeAttribute(Omit omit) => Omit = omit;
     public ECSSerializeAttribute(string profile) => Profile = profile;
 
-    public static ECSSerializeAttribute GetAttribute(Type type) => 
+    public static ECSSerializeAttribute GetAttribute(Type type) =>
       (ECSSerializeAttribute)GetCustomAttribute(type, typeof(ECSSerializeAttribute));
   }
 
@@ -55,7 +55,7 @@ namespace ManulECS {
       public bool HasEntityChanged => current != previous;
 
       ///<summary>Gets the current Entity</summary>
-      public Entity Entity => world[current];
+      public Entity Entity => world[(uint)current];
 
       ///<summary>Gets the current component from the current Entity.</summary>
       public object Component { get; private set; }
@@ -71,8 +71,9 @@ namespace ManulECS {
       ///<returns>true if next component was found, false if reader has reached the end.</returns>
       public bool Read() {
         while (current < world.Capacity) {
-          if (!Discard(Entity)) {
-            foreach (var idx in world.EntityKey(Entity)) {
+          var id = Entity.Id;
+          if (!Discard(id)) {
+            foreach (var idx in world.EntityKey(id)) {
               // Skip already checked components
               if (idx > componentIndex) {
                 var pool = world.pools.PoolByKeyIndex(idx);
@@ -82,7 +83,7 @@ namespace ManulECS {
                     previous = current;
                   }
                   componentIndex = idx;
-                  Component = pool.Get(Entity);
+                  Component = pool.Get(id);
                   return true;
                 }
               }
@@ -98,11 +99,11 @@ namespace ManulECS {
         return false;
       }
 
-      private bool Discard(Entity entity) {
+      private bool Discard(uint id) {
         if (componentIndex != -1) return false;
-        if (!world.IsAlive(entity)) return true;
+        if (!world.IsValid(id)) return true;
         string componentProfile = null;
-        foreach (var idx in world.EntityKey(entity)) {
+        foreach (var idx in world.EntityKey(id)) {
           var pool = world.pools.PoolByKeyIndex(idx);
           if (pool.Omit == Omit.Entity) {
             return true;

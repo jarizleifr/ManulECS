@@ -18,8 +18,8 @@ namespace ManulECS {
     internal readonly Dictionary<Key, View> views = new();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal ref Key EntityKey(in Entity entity) => ref entityKeys[entity.Id];
-    internal Entity this[int index] => entities[index];
+    internal ref Key EntityKey(uint id) => ref entityKeys[id];
+    internal Entity this[uint index] => entities[index];
 
     internal uint Capacity => nextId;
     /// <summary>Gets the count of alive entities.</summary>
@@ -56,14 +56,15 @@ namespace ManulECS {
     /// <summary>Removes an existing entity.</summary>
     /// <returns>true if entity successfully removed, false otherwise</returns>
     public bool Remove(in Entity entity) {
-      if (IsAlive(entity)) {
-        ref var key = ref EntityKey(entity);
+      var id = entity.Id;
+      if (IsValid(id)) {
+        ref var key = ref EntityKey(id);
         foreach (var idx in key) {
-          pools.PoolByKeyIndex(idx).Remove(entity);
+          pools.PoolByKeyIndex(idx).Remove(id);
         }
-        var (id, version) = entity;
+        var (destroyedId, version) = entity;
         (entities[id], key) = (new(destroyed, ++version), default);
-        destroyed = id;
+        destroyed = destroyedId;
         count--;
         return true;
       }
@@ -88,7 +89,7 @@ namespace ManulECS {
     public int Count<T>() where T : struct, IBaseComponent => UntypedPool<T>().Count;
 
     /// <summary>Does entity have a component or tag of type T?</summary>
-    public bool Has<T>(in Entity entity) where T : struct, IBaseComponent => UntypedPool<T>().Has(entity);
+    public bool Has<T>(in Entity entity) where T : struct, IBaseComponent => UntypedPool<T>().Has(entity.Id);
 
     /// <summary>Gets a component reference of type T from an entity.</summary>
     public ref T Get<T>(in Entity entity) where T : struct, IComponent => ref Pool<T>()[entity];
@@ -106,47 +107,51 @@ namespace ManulECS {
 
     /// <summary>Tags an entity with a tag of type T.</summary>
     public void Tag<T>(in Entity entity) where T : struct, ITag {
-      if (IsAlive(entity)) {
+      var id = entity.Id;
+      if (IsValid(id)) {
         var pool = TagPool<T>();
         var key = pool.Key;
-        ref var flags = ref EntityKey(entity);
+        ref var flags = ref EntityKey(id);
         if (!flags[key]) {
           flags += key;
-          pool.Set(entity);
+          pool.Set(id);
         }
       }
     }
 
     /// <summary>Assign a component of type T to an entity, if it doesn't exist.</summary>
     public void Assign<T>(in Entity entity, T component) where T : struct, IComponent {
-      if (IsAlive(entity)) {
+      var id = entity.Id;
+      if (IsValid(id)) {
         var pool = Pool<T>();
         var key = pool.Key;
-        ref var flags = ref EntityKey(entity);
+        ref var flags = ref EntityKey(id);
         if (!flags[key]) {
           flags += key;
-          pool.Set(entity, component);
+          pool.Set(id, component);
         }
       }
     }
 
     /// <summary>Assigns or replaces a component of type T to an entity.</summary>
     public void Patch<T>(in Entity entity, T component) where T : struct, IComponent {
-      if (IsAlive(entity)) {
+      var id = entity.Id;
+      if (IsValid(id)) {
         var pool = Pool<T>();
-        ref var flags = ref EntityKey(entity);
+        ref var flags = ref EntityKey(id);
         flags += pool.Key;
-        pool.Set(entity, component);
+        pool.Set(id, component);
       }
     }
 
     /// <summary>Removes a component/tag of type T from an entity.</summary>
     public void Remove<T>(in Entity entity) where T : struct, IBaseComponent {
-      if (IsAlive(entity)) {
+      var id = entity.Id;
+      if (IsValid(id)) {
         var pool = UntypedPool<T>();
-        ref var flags = ref EntityKey(entity);
+        ref var flags = ref EntityKey(id);
         flags -= pool.Key;
-        pool.Remove(entity);
+        pool.Remove(id);
       }
     }
 
@@ -159,12 +164,13 @@ namespace ManulECS {
 
     /// <summary>Creates a new copy of an entity, with all the same components and tags.</summary>
     public Entity Clone(in Entity entity) {
-      var clone = Create();
-      ref var cloneFlags = ref EntityKey(clone);
-      cloneFlags = EntityKey(entity);
+      var (id, clone) = (entity.Id, Create());
+      var cloneId = clone.Id;
+      ref var cloneFlags = ref EntityKey(cloneId);
+      cloneFlags = EntityKey(id);
       foreach (var idx in cloneFlags) {
         var pool = pools.PoolByKeyIndex(idx);
-        pool.Clone(entity, clone);
+        pool.Clone(id, cloneId);
       }
       return clone;
     }
@@ -173,8 +179,8 @@ namespace ManulECS {
     public void Clear<T>() where T : struct, IBaseComponent {
       var pool = UntypedPool<T>();
       var key = pool.Key;
-      foreach (var entity in pool.AsSpan()) {
-        ref var flags = ref EntityKey(entity);
+      foreach (var id in pool.AsSpan()) {
+        ref var flags = ref EntityKey(id);
         flags -= key;
       }
       pool.Clear();
@@ -182,7 +188,7 @@ namespace ManulECS {
 
     /// <summary>Gets entity validity.</summary> 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool IsAlive(in Entity entity) => entity.Id != Entity.NULL_ID && entities[entity.Id] == entity;
+    public bool IsAlive(in Entity entity) => IsValid(entity.Id);
 
     /// <summary>Gets the resource of type T.</summary> 
     public T GetResource<T>() => (T)resources[typeof(T)];
@@ -193,7 +199,12 @@ namespace ManulECS {
     /// <summary>Removes the resource of type T from the registry.</summary>
     public void ClearResource<T>() => resources.Remove(typeof(T));
 
+    /// <summary>Gets entity validity.</summary> 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool IsValid(uint id) => id != Entity.NULL_ID && entities[id].Id == id;
+
     internal static bool IsTag(Type type) => typeof(ITag).IsAssignableFrom(type);
+
     internal static bool IsComponent(Type type) => typeof(IComponent).IsAssignableFrom(type);
 
     /// <summary>Assigns a Resource by its runtime type.</summary>
@@ -203,13 +214,14 @@ namespace ManulECS {
     /// <summary>Assigns a boxed Component or Tag by its runtime type.</summary>
     /// <remarks>Used only for internal deserialization.</remarks>
     internal void AssignObject(in Entity entity, Type type, object component) {
+      var id = entity.Id;
       if (IsAlive(entity)) {
         var pool = pools.PoolByType(type);
         var key = pool.Key;
-        ref var flags = ref EntityKey(entity);
+        ref var flags = ref EntityKey(id);
         if (!flags[key]) {
           flags += key;
-          pool.SetObject(entity, component);
+          pool.SetObject(id, component);
         }
       }
     }

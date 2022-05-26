@@ -2,7 +2,7 @@ using System;
 
 namespace ManulECS {
   public abstract class Pool {
-    protected Entity[] entities;
+    protected uint[] ids;
     protected int nextIndex = 0;
 
     internal Omit Omit { get; init; } = Omit.None;
@@ -17,7 +17,7 @@ namespace ManulECS {
     }
 
     internal int Count => nextIndex;
-    internal int Capacity => entities.Length;
+    internal int Capacity => ids.Length;
 
     internal Pool(in Key key, ECSSerializeAttribute attribute) {
       Key = key;
@@ -31,17 +31,17 @@ namespace ManulECS {
       Reset();
     }
 
-    public ReadOnlySpan<Entity> AsSpan() => entities.AsSpan(0, nextIndex);
+    public ReadOnlySpan<uint> AsSpan() => ids.AsSpan(0, nextIndex);
 
-    internal abstract bool Has(in Entity entity);
-    internal abstract object Get(in Entity entity);
-    internal abstract void Remove(in Entity entity);
-    internal abstract void Clone(in Entity origin, in Entity target);
+    internal abstract bool Has(uint id);
+    internal abstract object Get(uint id);
+    internal abstract void Remove(uint id);
+    internal abstract void Clone(uint originId, uint targetId);
     internal abstract void Reset();
     internal abstract void Clear();
 
     /// <summary>Sets a component without knowing its type at compile-time.</summary>
     /// <remarks>Used only in deserialization.</remarks>
-    internal abstract void SetObject(in Entity entity, object component);
+    internal abstract void SetObject(uint id, object component);
   }
 }
