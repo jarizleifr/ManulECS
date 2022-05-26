@@ -5,7 +5,7 @@ namespace ManulECS.Tests {
   public class TagPoolFacts : PoolFacts {
     private readonly TagPool<Tag> pool;
 
-    protected static TagPool<Tag> GetPool() => new(new Key(0, 1u));
+    protected static TagPool<Tag> GetPool() => new(new Key(0));
 
     public TagPoolFacts() {
       pool = GetPool();
@@ -55,13 +55,13 @@ namespace ManulECS.Tests {
 
     [Fact]
     public void SetsAttributes_OnConstruct() {
-      var pool1 = new TagPool<OmitTag>(new Key(0, 1u));
-      Assert.True(pool1.Omit == Omit.Entity);
-      Assert.Null(pool1.Profile);
+      var pool1 = new TagPool<OmitTag>(new Key(0));
+      Assert.True(pool1.omit == Omit.Entity);
+      Assert.Null(pool1.profile);
 
-      var pool2 = new TagPool<ProfileTag>(new Key(0, 1u));
-      Assert.True(pool2.Omit == Omit.None);
-      Assert.Equal("test-profile", pool2.Profile);
+      var pool2 = new TagPool<ProfileTag>(new Key(1));
+      Assert.True(pool2.omit == Omit.None);
+      Assert.Equal("test-profile", pool2.profile);
     }
   }
 }

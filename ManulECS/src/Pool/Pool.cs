@@ -5,10 +5,9 @@ namespace ManulECS {
     protected uint[] ids;
     protected int nextIndex = 0;
 
-    internal Omit Omit { get; init; } = Omit.None;
-    internal string Profile { get; init; } = null;
-
-    internal Key Key { get; init; }
+    internal readonly Key key;
+    internal readonly Omit omit = Omit.None;
+    internal readonly string profile = null;
 
     protected Action onUpdate;
     internal Action OnUpdate {
@@ -20,12 +19,12 @@ namespace ManulECS {
     internal int Capacity => ids.Length;
 
     internal Pool(in Key key, ECSSerializeAttribute attribute) {
-      Key = key;
+      this.key = key;
       if (attribute != null) {
         if (attribute.Profile != null) {
-          Profile = attribute.Profile;
+          profile = attribute.Profile;
         } else if (attribute.Omit != Omit.None) {
-          Omit = attribute.Omit;
+          omit = attribute.Omit;
         }
       }
       Reset();

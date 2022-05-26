@@ -5,24 +5,24 @@ namespace ManulECS.Tests {
   public class KeyTests {
     [Fact]
     public void Matches() {
-      var key = new Key(0, 1);
-      Assert.True(key[new Key(0, 1)]);
-      Assert.False(key[new Key(2, 32)]);
+      var key = new Key(0);
+      Assert.True(key[new Key(0)]);
+      Assert.False(key[new Key(42)]);
     }
 
     [Fact]
     public void Matches_MultipleFlags() {
-      var key = new Key(0, 1) + new Key(0, 4);
-      Assert.True(key[new Key(0, 1)]);
-      Assert.True(key[new Key(0, 4)]);
-      Assert.True(key[new Key(0, 5)]);
+      var key = new Key(0) + new Key(2);
+      Assert.True(key[new Key(0)]);
+      Assert.True(key[new Key(2)]);
+      Assert.True(key[key]);
     }
 
     [Fact]
     public void IsEqualOf() {
-      var flag1 = new Key(0, 1);
-      var flag2 = new Key(0, 8);
-      var flag3 = new Key(1, 128);
+      var flag1 = new Key(0);
+      var flag2 = new Key(6);
+      var flag3 = new Key(9);
 
       var key1 = flag1 + flag2 + flag3;
       var key2 = flag1 + flag2 + flag3;
@@ -34,9 +34,9 @@ namespace ManulECS.Tests {
 
     [Fact]
     public void GetsSubset() {
-      var flag1 = new Key(0, 1);
-      var flag2 = new Key(0, 8);
-      var flag3 = new Key(1, 128);
+      var flag1 = new Key(0);
+      var flag2 = new Key(6);
+      var flag3 = new Key(9);
 
       var key1 = flag1 + flag2 + flag3;
       var key2 = flag1 + flag3;
@@ -47,10 +47,10 @@ namespace ManulECS.Tests {
 
     [Fact]
     public void Enumerates() {
-      var f1 = new Key(0, 1);
-      var f2 = new Key(1, 1);
-      var f3 = new Key(2, 1);
-      var f4 = new Key(3, 1 << 30);
+      var f1 = new Key(0);
+      var f2 = new Key(32);
+      var f3 = new Key(64);
+      var f4 = new Key(126);
 
       var key = f1 + f2 + f3 + f4;
       var flags = new List<int>();

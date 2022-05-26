@@ -77,7 +77,7 @@ namespace ManulECS {
               // Skip already checked components
               if (idx > componentIndex) {
                 var pool = world.PoolByKeyIndex(idx);
-                if (pool.Omit != Omit.Component) {
+                if (pool.omit != Omit.Component) {
                   // Update previous only if we have actually looped components 
                   if (componentIndex != -1) {
                     previous = current;
@@ -105,11 +105,11 @@ namespace ManulECS {
         string componentProfile = null;
         foreach (var idx in world.EntityKey(id)) {
           var pool = world.PoolByKeyIndex(idx);
-          if (pool.Omit == Omit.Entity) {
+          if (pool.omit == Omit.Entity) {
             return true;
           } else if (componentProfile == null) {
-            componentProfile = pool.Profile;
-          } else if (pool.Profile != null && componentProfile != pool.Profile) {
+            componentProfile = pool.profile;
+          } else if (pool.profile != null && componentProfile != pool.profile) {
             throw new Exception("Entity has components belonging to different serialization profiles!");
           }
         }

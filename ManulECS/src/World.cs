@@ -108,7 +108,7 @@ namespace ManulECS {
       var id = entity.Id;
       if (IsValid(id)) {
         var pool = TagPool<T>();
-        var key = pool.Key;
+        var key = pool.key;
         ref var flags = ref EntityKey(id);
         if (!flags[key]) {
           flags += key;
@@ -122,7 +122,7 @@ namespace ManulECS {
       var id = entity.Id;
       if (IsValid(id)) {
         var pool = Pool<T>();
-        var key = pool.Key;
+        var key = pool.key;
         ref var flags = ref EntityKey(id);
         if (!flags[key]) {
           flags += key;
@@ -137,7 +137,7 @@ namespace ManulECS {
       if (IsValid(id)) {
         var pool = Pool<T>();
         ref var flags = ref EntityKey(id);
-        flags += pool.Key;
+        flags += pool.key;
         pool.Set(id, component);
       }
     }
@@ -148,7 +148,7 @@ namespace ManulECS {
       if (IsValid(id)) {
         var pool = UntypedPool<T>();
         ref var flags = ref EntityKey(id);
-        flags -= pool.Key;
+        flags -= pool.key;
         pool.Remove(id);
       }
     }
@@ -176,7 +176,7 @@ namespace ManulECS {
     /// <summary>Remove all components or tags of type T from all entities.</summary>
     public void Clear<T>() where T : struct, IBaseComponent {
       var pool = UntypedPool<T>();
-      var key = pool.Key;
+      var key = pool.key;
       foreach (var id in pool.AsSpan()) {
         ref var flags = ref EntityKey(id);
         flags -= key;
@@ -213,9 +213,9 @@ namespace ManulECS {
     /// <remarks>Used only for internal deserialization.</remarks>
     internal void AssignObject(in Entity entity, Type type, object component) {
       var id = entity.Id;
-      if (IsAlive(entity)) {
+      if (IsValid(id)) {
         var pool = pools.PoolByType(type);
-        var key = pool.Key;
+        var key = pool.key;
         ref var flags = ref EntityKey(id);
         if (!flags[key]) {
           flags += key;
@@ -236,7 +236,7 @@ namespace ManulECS {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal Key Key<T>() where T : struct, IBaseComponent => pools.Pool<T>().Key;
+    internal Key Key<T>() where T : struct, IBaseComponent => pools.Pool<T>().key;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Pool UntypedPool<T>() where T : struct, IBaseComponent => pools.Pool<T>();
@@ -245,6 +245,6 @@ namespace ManulECS {
     internal TagPool<T> TagPool<T>() where T : struct, ITag => (TagPool<T>)pools.Pool<T>();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal Pool PoolByKeyIndex(int index) => pools.PoolByKeyIndex(index);
+    internal Pool PoolByKeyIndex(int index) => pools.PoolByIndex(index);
   }
 }

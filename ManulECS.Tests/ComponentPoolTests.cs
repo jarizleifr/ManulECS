@@ -6,7 +6,7 @@ namespace ManulECS.Tests {
     private static Component1 Value(uint value) => new() { value = value };
     private readonly Pool<Component1> pool;
 
-    private static Pool<Component1> GetPool() => new(new Key(0, 1u));
+    private static Pool<Component1> GetPool() => new(new Key(0));
 
     protected override List<Entity> CreateTestEntities(int count) {
       var entities = new List<Entity>();
@@ -72,13 +72,13 @@ namespace ManulECS.Tests {
 
     [Fact]
     public void SetsAttributes_OnConstruct() {
-      var pool1 = new Pool<DiscardEntity>(new Key(0, 1u));
-      Assert.True(pool1.Omit == Omit.Entity);
-      Assert.Null(pool1.Profile);
+      var pool1 = new Pool<DiscardEntity>(new Key(0));
+      Assert.True(pool1.omit == Omit.Entity);
+      Assert.Null(pool1.profile);
 
-      var pool2 = new Pool<ProfileComponent1>(new Key(0, 1u));
-      Assert.True(pool2.Omit == Omit.None);
-      Assert.Equal("test-profile", pool2.Profile);
+      var pool2 = new Pool<ProfileComponent1>(new Key(1));
+      Assert.True(pool2.omit == Omit.None);
+      Assert.Equal("test-profile", pool2.profile);
     }
   }
 

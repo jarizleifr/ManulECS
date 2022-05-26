@@ -6,25 +6,25 @@ namespace ManulECS {
     private const int MAX_SIZE = Constants.KEY_SIZE;
     private fixed uint u[MAX_SIZE];
 
-    internal Key(uint index, uint bits) => u[index] = bits;
+    internal Key(int typeIndex) => u[typeIndex / 32] = 1u << (typeIndex % 32);
 
     internal bool this[Key key] {
-      [MethodImpl(MethodImplOptions.AggressiveInlining)]
-      get {
-        for (int i = 0; i < MAX_SIZE; i++) {
-          if ((u[i] & key.u[i]) != key.u[i]) return false;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get {
+          for (int i = 0; i < MAX_SIZE; i++) {
+            if ((u[i] & key.u[i]) != key.u[i]) return false;
+          }
+          return true;
         }
-        return true;
       }
-    }
 
-    public static Key operator +(Key left, Key right) {
-      Key key;
-      for (int i = 0; i < MAX_SIZE; i++) {
-        key.u[i] = left.u[i] | right.u[i];
+      public static Key operator +(Key left, Key right) {
+        Key key;
+        for (int i = 0; i < MAX_SIZE; i++) {
+          key.u[i] = left.u[i] | right.u[i];
+        }
+        return key;
       }
-      return key;
-    }
 
     public static Key operator -(Key left, Key right) {
       Key key;
