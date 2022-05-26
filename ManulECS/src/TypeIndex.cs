@@ -4,7 +4,7 @@ using System.Threading;
 namespace ManulECS {
   /// <summary>Provides fast static type indexing for component types.</summary>
   internal static class TypeIndex {
-    internal const int MAX_INDEX = 512;
+    private const int MAX_INDEX = Constants.MAXIMUM_GLOBAL_COMPONENTS;
 
     private static class Index<T> where T : struct, IBaseComponent {
       internal static int value = MAX_INDEX;

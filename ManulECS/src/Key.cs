@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace ManulECS {
   internal unsafe record struct Key : IEquatable<Key> {
-    internal const int MAX_SIZE = 4;
+    private const int MAX_SIZE = Constants.KEY_SIZE;
     private fixed uint u[MAX_SIZE];
 
     internal Key(uint index, uint bits) => u[index] = bits;
@@ -49,33 +49,33 @@ namespace ManulECS {
         }
         return hash;
       }
-    }
+     }
 
-    public struct FlagEnumerator {
-      private readonly Key key;
-      private int i, j;
+     public struct FlagEnumerator {
+       private readonly Key key;
+       private int i, j;
 
-      internal FlagEnumerator(Key key) =>
-        (this.key, i, j) = (key, 0, -1);
+       internal FlagEnumerator(Key key) =>
+         (this.key, i, j) = (key, 0, -1);
 
-      public int Current => i * 32 + j;
+       public int Current => i * 32 + j;
 
-      public bool MoveNext() {
-        while (i < MAX_SIZE) {
-          if (++j < 32) {
-            if ((key.u[i] & 1u << j) != 0) {
-              return true;
-            }
-          } else {
-            j = -1;
-            i++;
-            continue;
-          }
-        }
-        return false;
-      }
-    }
+       public bool MoveNext() {
+         while (i < MAX_SIZE) {
+           if (++j < 32) {
+             if ((key.u[i] & 1u << j) != 0) {
+               return true;
+             }
+           } else {
+             j = -1;
+             i++;
+             continue;
+           }
+         }
+         return false;
+       }
+     }
 
-    public FlagEnumerator GetEnumerator() => new(this);
+     public FlagEnumerator GetEnumerator() => new(this);
   }
 }

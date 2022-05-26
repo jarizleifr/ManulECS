@@ -61,10 +61,10 @@ namespace ManulECS {
     }
 
     internal override void Reset() {
-      mapping = new uint[World.INITIAL_CAPACITY];
+      mapping = new uint[Constants.INITIAL_CAPACITY];
       Array.Fill(mapping, Entity.NULL_ID);
       nextIndex = 0;
-      ids = new uint[World.INITIAL_CAPACITY];
+      ids = new uint[Constants.INITIAL_CAPACITY];
       onUpdate?.Invoke();
     }
   }

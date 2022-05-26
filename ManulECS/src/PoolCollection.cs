@@ -20,20 +20,20 @@ namespace ManulECS {
   };
 
   internal sealed class PoolCollection {
-    private const int MAX_LOCAL_TYPES = Key.MAX_SIZE * 32;
-    internal const int MAX_GLOBAL_TYPES = TypeIndex.MAX_INDEX;
+    private const int MAX_GLOBAL_TYPES = Constants.MAXIMUM_GLOBAL_COMPONENTS;
+    private const int MAX_LOCAL_TYPES = Constants.MAXIMUM_LOCAL_COMPONENTS;
 
     private readonly Dictionary<Type, int> types = new();
     private readonly BitArray registered = new(MAX_GLOBAL_TYPES);
 
-    private int[] keyToTypeIndex = new int[World.INITIAL_CAPACITY];
-    private Pool[] indexedPools = new Pool[World.INITIAL_CAPACITY];
+    private int[] keyToTypeIndex = new int[Constants.INITIAL_CAPACITY];
+    private Pool[] indexedPools = new Pool[Constants.INITIAL_CAPACITY];
     private KeyFlag nextFlag = new(0, 1u);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Pool Pool<T>() where T : struct, IBaseComponent {
       var typeIndex = TypeIndex.Get<T>();
-      if (typeIndex == TypeIndex.MAX_INDEX || !registered[typeIndex]) {
+      if (typeIndex == Constants.MAXIMUM_GLOBAL_COMPONENTS || !registered[typeIndex]) {
         typeIndex = Register<T>();
       }
       return indexedPools[typeIndex];

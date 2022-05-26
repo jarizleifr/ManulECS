@@ -6,7 +6,7 @@ namespace ManulECS {
   /// <summary>A view of entities, possessing the components specified in the key.</summary>
   public sealed class View {
     private readonly Key key;
-    private Entity[] entities = new Entity[World.INITIAL_CAPACITY];
+    private Entity[] entities = new Entity[Constants.INITIAL_CAPACITY];
 
     private int count = 0;
     private bool dirty = true;
@@ -21,7 +21,7 @@ namespace ManulECS {
     }
 
     internal void Clear() =>
-      (entities, count, dirty) = (new Entity[World.INITIAL_CAPACITY], 0, true);
+      (entities, count, dirty) = (new Entity[Constants.INITIAL_CAPACITY], 0, true);
 
     internal void Update(World world) {
       if (dirty) {

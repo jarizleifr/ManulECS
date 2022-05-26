@@ -5,13 +5,12 @@ using static ManulECS.ArrayUtil;
 
 namespace ManulECS {
   public partial class World {
-    internal const int INITIAL_CAPACITY = 4;
     private uint destroyed = Entity.NULL_ID;
     private uint nextId = 0;
     private uint count = 0;
 
-    private Entity[] entities = new Entity[INITIAL_CAPACITY];
-    private Key[] entityKeys = new Key[INITIAL_CAPACITY];
+    private Entity[] entities = new Entity[Constants.INITIAL_CAPACITY];
+    private Key[] entityKeys = new Key[Constants.INITIAL_CAPACITY];
 
     internal readonly Dictionary<Type, object> resources = new();
     internal readonly PoolCollection pools = new();
@@ -73,8 +72,8 @@ namespace ManulECS {
 
     /// <summary>Clears all entities, components and resources from the world.</summary>
     public void Clear() {
-      entities = new Entity[INITIAL_CAPACITY];
-      entityKeys = new Key[INITIAL_CAPACITY];
+      entities = new Entity[Constants.INITIAL_CAPACITY];
+      entityKeys = new Key[Constants.INITIAL_CAPACITY];
       destroyed = Entity.NULL_ID;
       (nextId, count) = (0, 0);
 
