@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using static ManulECS.ArrayUtil;
 
 namespace ManulECS {
-  public sealed class Pool<T> : Pool where T : struct {
+  public sealed class Pool<T> : Pool {
     private T[] components;
     private uint[] mapping;
 
@@ -38,7 +38,7 @@ namespace ManulECS {
       onUpdate?.Invoke();
     }
 
-    internal override void SetObject(uint id, object component) =>
+    internal override void SetRaw(uint id, object component) =>
       Set(id, (T)component);
 
     internal override void Remove(uint id) {
@@ -67,11 +67,11 @@ namespace ManulECS {
     }
 
     internal override void Reset() {
-      mapping = new uint[Constants.INITIAL_CAPACITY];
+      mapping = new uint[World.INITIAL_CAPACITY];
       Array.Fill(mapping, Entity.NULL_ID);
       nextIndex = 0;
-      ids = new uint[Constants.INITIAL_CAPACITY];
-      components = new T[Constants.INITIAL_CAPACITY];
+      ids = new uint[World.INITIAL_CAPACITY];
+      components = new T[World.INITIAL_CAPACITY];
       onUpdate?.Invoke();
     }
   }

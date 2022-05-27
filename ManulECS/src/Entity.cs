@@ -29,6 +29,7 @@ namespace ManulECS {
     public static bool operator ==(Entity left, Entity right) => left.Equals(right);
     public static bool operator !=(Entity left, Entity right) => !left.Equals(right);
 
+    public override string ToString() => $"{Id}:{Version}";
     public override bool Equals(object obj) => obj is Entity entity && Equals(entity);
     public override int GetHashCode() => (int)uuid;
   }
@@ -40,22 +41,22 @@ namespace ManulECS {
     internal EntityHandle(World world, Entity entity) =>
       (this.world, this.entity) = (world, entity);
 
-    public EntityHandle Tag<T>() where T : struct, ITag {
+    public EntityHandle Tag<T>() where T : struct, Tag {
       world.Tag<T>(entity);
       return this;
     }
 
-    public EntityHandle Assign<T>(T component) where T : struct, IComponent {
+    public EntityHandle Assign<T>(T component) where T : struct, Component {
       world.Assign(entity, component);
       return this;
     }
 
-    public EntityHandle Patch<T>(T component) where T : struct, IComponent {
+    public EntityHandle Patch<T>(T component) where T : struct, Component {
       world.Patch(entity, component);
       return this;
     }
 
-    public EntityHandle Remove<T>() where T : struct, IBaseComponent {
+    public EntityHandle Remove<T>() where T : struct, BaseComponent {
       world.Remove<T>(entity);
       return this;
     }

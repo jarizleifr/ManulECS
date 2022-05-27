@@ -6,8 +6,6 @@ namespace ManulECS.Tests {
     private static Component1 Value(uint value) => new() { value = value };
     private readonly Pool<Component1> pool;
 
-    private static Pool<Component1> GetPool() => new(new Key(0));
-
     protected override List<Entity> CreateTestEntities(int count) {
       var entities = new List<Entity>();
       for (uint i = 0; i < count; i++) {
@@ -19,7 +17,7 @@ namespace ManulECS.Tests {
     }
 
     public ComponentPoolFacts() {
-      pool = GetPool();
+      pool = new(new Key(0));
       untypedPool = pool;
     }
 
@@ -53,11 +51,11 @@ namespace ManulECS.Tests {
     }
 
     [Fact]
-    public void SetsUntypedComponent() {
+    public void SetsRawComponent() {
       var e1 = new Entity(0, 0);
       var e2 = new Entity(1, 0);
-      untypedPool.SetObject(e1.Id, new Component1 { value = 1 });
-      untypedPool.SetObject(e2.Id, new Component1 { value = 2 });
+      untypedPool.SetRaw(e1.Id, new Component1 { value = 1 });
+      untypedPool.SetRaw(e2.Id, new Component1 { value = 2 });
       Assert.Equal(2, untypedPool.Count);
       Assert.Equal(1u, ((Component1)untypedPool.Get(e1.Id)).value);
       Assert.Equal(2u, ((Component1)untypedPool.Get(e2.Id)).value);

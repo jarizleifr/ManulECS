@@ -3,14 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace ManulECS.Tests {
   public class SerializationTests {
     private World world;
-    private readonly ITestOutputHelper output;
 
-    public SerializationTests(ITestOutputHelper output) => (world, this.output) = (new World(), output);
+    public SerializationTests() => world = new World();
 
     private void CreateNormalEntities() {
       var e1 = world.Create();
@@ -44,9 +42,8 @@ namespace ManulECS.Tests {
     private byte[] Serialize(string profile = null) {
       var serializer = new JsonWorldSerializer();
       using var stream = new MemoryStream();
-        serializer.Write(stream, world, profile);
-        var buffer = stream.ToArray();
-      output.WriteLine(Encoding.UTF8.GetString(buffer));
+      serializer.Write(stream, world, profile);
+      var buffer = stream.ToArray();
       return buffer;
     }
 

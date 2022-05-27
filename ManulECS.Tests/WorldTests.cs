@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Xunit;
 
 namespace ManulECS.Tests {
@@ -27,8 +28,8 @@ namespace ManulECS.Tests {
 
     [Fact]
     public void CreatesTagPool() {
-      var pool = world.TagPool<Tag>();
-      Assert.IsType<TagPool<Tag>>(pool);
+      var pool = world.pools.RawPool<Tag1>();
+      Assert.IsType<TagPool<Tag1>>(pool);
     }
 
     [Fact]
@@ -55,7 +56,7 @@ namespace ManulECS.Tests {
     [Fact]
     public void UpdatesCount_WhenEntityRemoved() {
       var count = world.Count();
-      world.Remove(world[0]);
+      world.Remove(world.GetEntity(0));
       Assert.Equal(count - 1, world.Count());
     }
 
@@ -65,7 +66,7 @@ namespace ManulECS.Tests {
       world.Assign(e, new Component1 { value = 100u });
       var comp = world.Get<Component1>(e);
       Assert.Equal(100u, comp.value);
-      Assert.True(world.EntityKey(e.Id)[world.Key<Component1>()]);
+      Assert.True(world.GetEntityKey(e.Id)[world.pools.GetKey<Component1>()]);
     }
 
     [Fact]
@@ -75,59 +76,58 @@ namespace ManulECS.Tests {
 
       var comp = world.Get<Component1>(e);
       Assert.Equal(200u, comp.value);
-      Assert.True(world.EntityKey(e.Id)[world.Key<Component1>()]);
+      Assert.True(world.GetEntityKey(e.Id)[world.pools.GetKey<Component1>()]);
     }
 
     [Fact]
     public void RemovesComponent() {
       Entity e = world.Handle().Assign(new Component1 { value = 100u });
       Assert.True(world.Has<Component1>(e));
-      Assert.True(world.EntityKey(e.Id)[world.Key<Component1>()]);
+      Assert.True(world.GetEntityKey(e.Id)[world.pools.GetKey<Component1>()]);
 
       world.Remove<Component1>(e);
       Assert.False(world.Has<Component1>(e));
-      Assert.False(world.EntityKey(e.Id)[world.Key<Component1>()]);
+      Assert.False(world.GetEntityKey(e.Id)[world.pools.GetKey<Component1>()]);
     }
 
     [Fact]
     public void Tags() {
-      Entity e = world.Handle().Tag<Tag>();
-      Assert.True(world.Has<Tag>(e));
-      Assert.True(world.EntityKey(e.Id)[world.Key<Tag>()]);
+      Entity e = world.Handle().Tag<Tag1>();
+      Assert.True(world.Has<Tag1>(e));
+      Assert.True(world.GetEntityKey(e.Id)[world.pools.GetKey<Tag1>()]);
     }
 
     [Fact]
     public void Untags() {
-      Entity e = world.Handle().Tag<Tag>();
-      Assert.True(world.Has<Tag>(e));
-      Assert.True(world.EntityKey(e.Id)[world.Key<Tag>()]);
+      Entity e = world.Handle().Tag<Tag1>();
+      Assert.True(world.Has<Tag1>(e));
+      Assert.True(world.GetEntityKey(e.Id)[world.pools.GetKey<Tag1>()]);
 
-      world.Remove<Tag>(e);
-      Assert.False(world.Has<Tag>(e));
-      Assert.False(world.EntityKey(e.Id)[world.Key<Tag>()]);
+      world.Remove<Tag1>(e);
+      Assert.False(world.Has<Tag1>(e));
+      Assert.False(world.GetEntityKey(e.Id)[world.pools.GetKey<Tag1>()]);
     }
 
     [Fact]
-    public void AssignsObject() {
+    public void AssignsRawComponent() {
       var e = world.Create();
-      world.AssignObject(e, typeof(Component1), new Component1 { value = 100u });
-      world.AssignObject(e, typeof(Tag), null);
+      world.AssignRaw(e, typeof(Component1), new Component1 { value = 100u });
+      world.AssignRaw(e, typeof(Tag1), null);
       var comp = world.Get<Component1>(e);
       Assert.Equal(100u, comp.value);
-      Assert.True(world.Has<Tag>(e));
-      Assert.True(world.EntityKey(e.Id)[world.Key<Tag>()]);
+      Assert.True(world.Has<Tag1>(e));
+      Assert.True(world.GetEntityKey(e.Id)[world.pools.GetKey<Tag1>()]);
     }
 
     [Fact]
     public void CreatesNewKeyFlagsSequentially() {
-      var key = world.Key<Component1>() + world.Key<Component2>() + world.Key<Component3>();
+      var key = world.pools.GetKey<Component1, Component2, Component3>();
       var list = new List<int>();
       foreach (var idx in key) {
         list.Add(idx);
       }
-      Assert.Contains(0, list);
-      Assert.Contains(1, list);
-      Assert.Contains(2, list);
+      Assert.Equal(3, list.Count);
+      Assert.Equal(list.Distinct().Count(), list.Count);
     }
   }
 }

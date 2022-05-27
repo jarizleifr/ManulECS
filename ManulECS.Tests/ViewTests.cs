@@ -48,7 +48,7 @@ namespace ManulECS.Tests {
 
     [Fact]
     public void CachesView_WhenUsedFirstTime() {
-      var key = world.Key<Component1>() + world.Key<Component2>();
+      var key = world.pools.GetKey<Component1, Component2>();
       Assert.False(world.views.ContainsKey(key));
 
       world.View<Component1, Component2>();

@@ -105,7 +105,7 @@ namespace ManulECS {
         foreach (var jsonComponent in entity.Value.EnumerateObject()) {
           try {
             var (type, component) = DeserializeProperty(jsonComponent);
-            world.AssignObject(created, type, component);
+            world.AssignRaw(created, type, component);
           } catch {
             // If errors, just skip the component with a warning.
             Console.WriteLine($"Component failed to deserialize: {jsonComponent}");
@@ -120,14 +120,13 @@ namespace ManulECS {
     }
 
     private (Type, object) DeserializeProperty(JsonProperty property) {
-      if (!typeCache.TryGetValue(property.Name, out var type)) {
-        type = Type.GetType(GetTypeName(property.Name));
-        typeCache.Add(property.Name, type);
+      var name = property.Name;
+      if (!typeCache.TryGetValue(name, out var type)) {
+        var typeName = Namespace == null ? $"{name}, {AssemblyName}" : $"{Namespace}.{name}, {AssemblyName}";
+        type = Type.GetType(typeName);
+        typeCache.Add(name, type);
       }
-      return (type, World.IsTag(type) ? null : property.Value.Deserialize(type, options));
-
-      string GetTypeName(string name) =>
-        Namespace == null ? $"{name}, {AssemblyName}" : $"{Namespace}.{name}, {AssemblyName}";
+      return (type, property.Value.Deserialize(type, options));
     }
   }
 }

@@ -27,7 +27,7 @@ namespace ManulECS.Benchmark {
     public void CreateEntitiesWith1Component() {
       for (int i = 0; i < N; i++) {
         var entity = world.Create();
-        world.Assign<Pos>(entity, new());
+        world.Assign<Comp1>(entity, new());
       }
     }
 
@@ -35,8 +35,8 @@ namespace ManulECS.Benchmark {
     public void CreateEntitiesWith2Components() {
       for (int i = 0; i < N; i++) {
         var entity = world.Create();
-        world.Assign<Pos>(entity, new());
-        world.Assign<Move>(entity, new());
+        world.Assign<Comp1>(entity, new());
+        world.Assign<Comp2>(entity, new());
       }
     }
 

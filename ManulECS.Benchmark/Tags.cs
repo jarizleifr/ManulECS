@@ -32,6 +32,7 @@ namespace ManulECS.Benchmark {
         entity = e;
       }
     }
+
     [Benchmark]
     public void Loop2Tags() {
       Entity entity;

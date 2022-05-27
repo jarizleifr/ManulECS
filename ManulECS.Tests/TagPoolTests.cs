@@ -3,12 +3,10 @@ using Xunit;
 
 namespace ManulECS.Tests {
   public class TagPoolFacts : PoolFacts {
-    private readonly TagPool<Tag> pool;
-
-    protected static TagPool<Tag> GetPool() => new(new Key(0));
+    private readonly TagPool<Tag1> pool;
 
     public TagPoolFacts() {
-      pool = GetPool();
+      pool = new(new Key(0));
       untypedPool = pool;
     }
 
@@ -38,8 +36,8 @@ namespace ManulECS.Tests {
     public void SetsObject() {
       var e1 = new Entity(0, 0);
       var e2 = new Entity(1, 0);
-      untypedPool.SetObject(e1.Id, null);
-      untypedPool.SetObject(e2.Id, null);
+      untypedPool.SetRaw(e1.Id, null);
+      untypedPool.SetRaw(e2.Id, null);
       Assert.Equal(2, untypedPool.Count);
       Assert.True(pool.Has(e1.Id));
       Assert.True(pool.Has(e2.Id));

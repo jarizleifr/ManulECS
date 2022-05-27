@@ -30,7 +30,7 @@ namespace ManulECS {
       }
     }
 
-    internal override void SetObject(uint id, object _) => Set(id);
+    internal override void SetRaw(uint id, object _) => Set(id);
 
     internal override void Remove(uint id) {
       if (id < mapping.Length) {
@@ -61,10 +61,10 @@ namespace ManulECS {
     }
 
     internal override void Reset() {
-      mapping = new uint[Constants.INITIAL_CAPACITY];
+      mapping = new uint[World.INITIAL_CAPACITY];
       Array.Fill(mapping, Entity.NULL_ID);
       nextIndex = 0;
-      ids = new uint[Constants.INITIAL_CAPACITY];
+      ids = new uint[World.INITIAL_CAPACITY];
       onUpdate?.Invoke();
     }
   }

@@ -1,12 +1,11 @@
 using BenchmarkDotNet.Running;
 
 namespace ManulECS.Benchmark {
-  public struct Comp1 : IComponent { }
-  public struct Comp2 : IComponent { }
-  public struct Tag1 : ITag { }
-  public struct Tag2 : ITag { }
-  public struct Pos : IComponent { public int x, y; }
-  public struct Move : IComponent { public int mx, my; }
+  public struct Comp1 : Component { public int value; }
+  public struct Comp2 : Component { public int value; }
+  public struct Comp3 : Component { public int value; }
+  public struct Tag1 : Tag { }
+  public struct Tag2 : Tag { }
 
   public class Program {
     public static void Main() {

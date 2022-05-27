@@ -8,9 +8,9 @@ I wrote a library called ManulEC in 2019 for my roguelike game to provide simple
 
 ### Focus on simplicity
 
-I've tried to keep ManulECS as light and simple as possible, while still managing competetive single-thread performance with other libraries of the same sort. There are bound to be more feature-rich and more performant ECS implementations out there, but mine does its job in less than 900 lines of code, comments, blanks and tests notwithstanding.
+Ultimately, ManulECS is just a library and not a framework. It is assumed that ECS is just a part of whatever larger architecture you're using. ManulECS doesn't care about how to build your systems or model your program states. It provides just the core functionality for composition of entities, iterating them and serializing the whole mess to JSON and back.
 
-Out-of-the-box, there are no system classes to override, no code generation, no events, no parallelism. Just the core functionality for composition, iteration and serialization.
+I've tried to keep ManulECS as light and simple as possible, while still managing competetive single-thread performance with other libraries of the same sort. There are bound to be more feature-rich and more performant ECS implementations out there, but mine does its job in less than 900 lines of code, comments, blanks and tests notwithstanding.
 
 ### Sparse sets of components
 
@@ -21,7 +21,7 @@ Under the hood, ManulECS uses sparse sets of structs to achieve data locality. T
 - **Tag**, a boolean flag, which don't contain data
 - **Resource**, singleton class that exists outside the sphere of entities
 
-A collection of entities having a certain configuration of components and tags is called a View, which 
+A collection of entities having a certain configuration of Components and Tags is called a View, which is pretty much just a read-only Span of entities for us to index components with. 
 
 ### Serialization
 
@@ -29,15 +29,15 @@ There's a JSON serializer included in the project, there's also support for cust
 
 ### Limitations, known issues
 
-Entities are limited by unsigned 3-byte value, meaning the maximum number of entities is 16777215.
+Entity ids are limited by an unsigned 3-byte value, meaning the maximum number of entities is 16777215.
 
-For components and tags, there's currently a 256 limit per World, but you can have up to 512 components in total, if you use different sets of components in different worlds. These are arbitrary constants, ManulECS works fine with any values, but increasing these will come with a performance cost.
+Maximum component/tag limit is controlled by the `MAX_SIZE` constant in `ManulECS\Key.cs`. With the default value of 4, we can have up to 128 (4*32) components or tags. ManulECS works fine with any values, but larger values will come with a performance cost.
 
 ## Overview
 
 ### World
 
-The ManulECS entity registry is called a `World`. It is self-contained, and we can have multiple worlds with different sets of components.
+The ManulECS entity registry is called a `World` and we can have multiple worlds, should we want to.
 
 ```csharp
 var world = new World(); // Create a new entity registry.
@@ -54,12 +54,12 @@ world.Remove(entity);        // Remove the entity, clearing all components in th
 
 ### Components and Tags
 
-There are two kinds of things assignable to entities, Components and Tags. They are specified by using marker interfaces `IComponent` and `ITag`. These interfaces are used only for method constraints to give some useful static typing, so there's no unnecessary boxing of structs happening. Component pools are setup automatically on first use, so there's no need to declare them beforehand.
+There are two kinds of things assignable to entities, Components and Tags. They are specified by using marker interfaces `Component` and `Tag`. These interfaces are used only for method constraints to give some useful static typing, so there's no unnecessary boxing of structs happening. Component pools are setup automatically on first use, so there's no need to declare them beforehand.
 
 Components are simple data structs.
 
 ```csharp
-public struct Pos : IComponent {
+public struct Pos : Component {
   public int x;
   public int y;
 }
@@ -68,7 +68,7 @@ public struct Pos : IComponent {
 Tags don't contain any data. They're like a typed boolean flag related to an entity.
 
 ```csharp
-public struct IsPlayer : ITag { }
+public struct IsPlayer : Tag { }
 ```
 
 Easiest way to assign new components to entities is to use field initializers. `Assign` will only assign component if not already found on the entity, `Patch` will replace the existing component.
@@ -87,10 +87,10 @@ world.Tag<IsPlayer>(entity);
 We can remove components one by one, or clear all components of type T from all entities. Components and Tags are removed/cleared the same way.
 
 ```csharp
-world.Remove<Component>(entity);  // Remove a component from a single entity
-world.Remove<Tag>(entity);        // Remove a tag from a single entity
-world.Clear<Component>();         // Clear all components of type
-world.Clear<Tag>();               // Clear all tags of type
+world.Remove<SomeComponent>(entity); // Remove a component from a single entity
+world.Remove<SomeTag>(entity);       // Remove a tag from a single entity
+world.Clear<SomeComponent>();        // Clear all components of type
+world.Clear<SomeTag>();              // Clear all tags of type
 ```
 
 ### Entity handles
@@ -161,21 +161,21 @@ We can control what components should be serialized by attributes. This is opt-o
 
 ```csharp
 [ECSSerialize(Omit.Component)]
-public struct IntentionMove : IComponent { }  // This component is never serialized
+public struct IntentionMove : Component { }  // This component is never serialized
 
 [ECSSerialize(Omit.Entity)]
-public struct VisualEffect : IComponent { }   // The entire entity owning this component is never serialized
+public struct VisualEffect : Component { }   // The entire entity owning this component is never serialized
 ```
 
 ManulECS also features a concept of serialization profiles, which we declare on component and resource basis. Always affects the entire entity.
 
 ```csharp
 // The entity will only be serialized when no profile has been provided
-public struct Monster : IComponent { }
+public struct Monster : Component { }
 
 // The entity will only be serialized when "global" profile has been provided
 [ECSSerialize("global")]   
-public struct Player : IComponent { }
+public struct Player : Component { }
 ```
 
 We can use serialization profiles on resources as well. Note that Omit does nothing when used on resources.
@@ -289,55 +289,56 @@ Benchmarks were run on:
 
 ### Creation and removal
 
-We start reaching the multi-ms range at creating/removing 100000 entities per frame, which on its own seems like a bit extreme use case. Tags do still have some overhead, albeit less than components.
+We start reaching the multi-ms range at around creating/removing 100000 entities per frame, which on its own seems like a bit extreme use case. Tags do still have some memory overhead, albeit less than components.
 
 |                        Method |      N |     Mean |     Error |    StdDev | Allocated |
 |------------------------------ |------- |---------:|----------:|----------:|----------:|
-|                CreateEntities | 100000 | 2.000 ms | 0.0359 ms | 0.0336 ms |      4 MB |
-|  CreateEntitiesWith1Component | 100000 | 5.216 ms | 0.0560 ms | 0.0523 ms |      7 MB |
-| CreateEntitiesWith2Components | 100000 | 8.506 ms | 0.0612 ms | 0.0573 ms |     10 MB |
-|        CreateEntitiesWith1Tag | 100000 | 4.259 ms | 0.0258 ms | 0.0215 ms |      6 MB |
-|       CreateEntitiesWith2Tags | 100000 | 6.874 ms | 0.0396 ms | 0.0370 ms |      7 MB |
+|                CreateEntities | 100000 | 1.673 ms | 0.0277 ms | 0.0259 ms |      4 MB |
+|  CreateEntitiesWith1Component | 100000 | 3.656 ms | 0.0709 ms | 0.0663 ms |      6 MB |
+| CreateEntitiesWith2Components | 100000 | 5.807 ms | 0.0270 ms | 0.0240 ms |      9 MB |
+|        CreateEntitiesWith1Tag | 100000 | 3.361 ms | 0.0233 ms | 0.0195 ms |      6 MB |
+|       CreateEntitiesWith2Tags | 100000 | 5.401 ms | 0.0367 ms | 0.0343 ms |      7 MB |
 
-Creating tags is a bit faster than creating components, but they're about the same when removing. Fastest way to get rid of components, is to remove the entire entity holding them.
+Creating tags is a tiny bit faster than creating components, but they're about the same when removing. Fastest way to get rid of components, is to remove the entire entity holding them.
 
 |                        Method |      N |       Mean |    Error |   StdDev |
 |------------------------------ |------- |-----------:|---------:|---------:|
-|                RemoveEntities | 100000 |   615.6 μs |  7.40 μs |  6.92 μs |
-|  Remove1ComponentFromEntities | 100000 | 1,883.1 μs | 18.33 μs | 17.15 μs |
-| Remove2ComponentsFromEntities | 100000 | 3,989.2 μs | 47.58 μs | 42.18 μs |
-|        Remove1TagFromEntities | 100000 | 1,973.3 μs | 19.91 μs | 18.62 μs |
-|        Remove2TagFromEntities | 100000 | 4,028.0 μs | 42.75 μs | 39.98 μs |
+|                RemoveEntities | 100000 |   463.6 μs |  2.30 μs |  1.92 μs |
+|  Remove1ComponentFromEntities | 100000 | 1,389.5 μs |  4.31 μs |  3.60 μs |
+| Remove2ComponentsFromEntities | 100000 | 2,721.2 μs | 21.35 μs | 19.97 μs |
+|        Remove1TagFromEntities | 100000 | 1,309.7 μs |  4.29 μs |  4.02 μs |
+|        Remove2TagFromEntities | 100000 | 2,671.5 μs |  5.31 μs |  4.71 μs |
 
 ### Iterating views
 
-For components, the update functions are simple move operations with an x/x,y transform applied on x/x,y coordinates.
+Benchmarks perform a simple add operation for each component.
 
 The worst case scenario benchmark rebuilds the entity view on each iteration. There is currently no sorting mechanism, so iteration isn't as cache-friendly as I'd like, but it's _fast enough_ even with random access, with the added bonus that we can use simple foreach loops instead of complex lambdas (no need to worry about closures) or creating system classes.
 
-My previous benchmark for two component update was 465μs, so I'm pretty happy with the current performance.
+Most of the time is spent on retrieving pools and doing actual operations on data. Just looping through components and doing nothing with them has similar performance as with looping tags.
 
 |                              Method |      N |     Mean |   Error |  StdDev |
 |------------------------------------ |------- |---------:|--------:|--------:|
-|                    Update1Component | 100000 | 115.8 μs | 0.89 μs | 0.83 μs |
-|                   Update2Components | 100000 | 242.1 μs | 0.87 μs | 0.77 μs |
-| Update2Components_WorstCaseScenario | 100000 | 694.2 μs | 5.94 μs | 5.56 μs |
+|                    Update1Component | 100000 | 104.6 μs | 0.62 μs | 0.55 μs |
+|                   Update2Components | 100000 | 181.9 μs | 0.56 μs | 0.52 μs |
+| Update2Components_WorstCaseScenario | 100000 | 585.1 μs | 1.89 μs | 1.57 μs |
+|                   Update3Components | 100000 | 329.7 μs | 1.22 μs | 1.08 μs |
 
 For tags, there's virtually no difference between looping through 1 or 2 tags.
 
-|    Method |      N |     Mean |    Error |   StdDev |
-|---------- |------- |---------:|---------:|---------:|
-|  Loop1Tag | 100000 | 24.50 μs | 0.081 μs | 0.076 μs |
-| Loop2Tags | 100000 | 24.50 μs | 0.063 μs | 0.056 μs |
+|    Method |      N |     Mean |    Error |   StdDev |   Median |
+|---------- |------- |---------:|---------:|---------:|---------:|
+|  Loop1Tag | 100000 | 33.08 μs | 0.859 μs | 2.520 μs | 32.41 μs |
+| Loop2Tags | 100000 | 32.99 μs | 0.770 μs | 2.246 μs | 32.29 μs |
  
 ### Serialization
 
-The benchmark serializes/deserializes a world containing 100000 entities, each with two Components and one Tag. Serialization benchmarks use MemoryStreams, so results are most likely different when writing to an actual filesystem. Serialization also relies heavily on caching, so first runs might take longer than the subsequent ones, especially if deserializing lots of components that haven't been registered yet. 
+The benchmark serializes/deserializes a world containing 100000 entities, each with two Components and one Tag. Serialization benchmarks use MemoryStreams, so results are most likely different when writing to an actual filesystem. Serialization also relies heavily on caching, so first runs might will take longer than the subsequent ones, especially if deserializing lots of components that haven't been registered yet by the application. 
 
-Nevertheless, it's advisable to not serialize/deserialize World data in the middle of the tightest gameplay loops. It's still fast *enough* for things like autosaves, dumping state on disk between level transitions etc. For comparisons, according to the profiler, my own (relatively complex) roguelike game takes on average about 500ms to deserialize and 300ms to serialize.
+Nevertheless, it's advisable to not serialize/deserialize World data too much in the middle of the tightest gameplay loops.
 
-|      Method |      N |     Mean |   Error |  StdDev |     Gen 0 | Allocated |
-|------------ |------- |---------:|--------:|--------:|----------:|----------:|
-|   Serialize | 100000 | 107.1 ms | 0.56 ms | 0.50 ms | 3000.0000 |     25 MB |
-| Deserialize | 100000 | 145.6 ms | 1.45 ms | 1.35 ms | 4000.0000 |     35 MB |
+|      Method |      N |      Mean |    Error |   StdDev |     Gen 0 | Allocated |
+|------------ |------- |----------:|---------:|---------:|----------:|----------:|
+|   Serialize | 100000 |  83.35 ms | 0.679 ms | 0.635 ms | 3000.0000 |     33 MB |
+| Deserialize | 100000 | 187.71 ms | 0.865 ms | 0.809 ms | 5000.0000 |     41 MB |
 

@@ -1,35 +1,36 @@
 namespace ManulECS.Tests {
-  public struct Component1 : IComponent { public uint value; }
-  public struct Component2 : IComponent { public int value; }
-  public struct Component3 : IComponent { public int v1; public int v2; }
-  public struct Component4 : IComponent { public int v1; public int v2; }
-  public struct Tag : ITag { }
+  public struct Component1 : Component { public uint value; }
+  public struct Component2 : Component { public int value; }
+  public struct Component3 : Component { public int v1; public int v2; }
+  public struct Component4 : Component { public int v1; public int v2; }
+  public struct Tag1 : Tag { }
 
   [ECSSerialize("test-profile")]
-  public struct ProfileComponent1 : IComponent { }
+  public struct ProfileComponent1 : Component { }
 
   [ECSSerialize("test-profile")]
-  public struct ProfileComponent2 : IComponent { }
+  public struct ProfileComponent2 : Component { }
 
   [ECSSerialize("test-profile-2")]
-  public struct ProfileComponent3 : IComponent { }
+  public struct ProfileComponent3 : Component { }
 
   [ECSSerialize(Omit.Component)]
-  public struct DiscardComponent : IComponent { }
+  public struct DiscardComponent : Component { }
 
   [ECSSerialize(Omit.Entity)]
-  public struct DiscardEntity : IComponent { }
+  public struct DiscardEntity : Component { }
 
   [ECSSerialize(Omit.Entity)]
-  public struct OmitTag : ITag { }
+  public struct OmitTag : Tag { }
 
   [ECSSerialize("test-profile")]
-  public struct ProfileTag : ITag { }
+  public struct ProfileTag : Tag { }
 
-  public struct ComponentWithReference1 : IComponent {
+  public struct ComponentWithReference1 : Component {
     public Entity entity;
   }
-  public struct ComponentWithReference2 : IComponent {
+
+  public struct ComponentWithReference2 : Component {
     public Entity entity;
   }
 

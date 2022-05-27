@@ -34,7 +34,7 @@ namespace ManulECS {
     public abstract void Write(Stream stream, World world, string profile = null);
 
     /// <summary>Gets a list of resources from the current World as objects.</summary>
-    protected IEnumerable<object> GetResources(World world, string profile) => world.resources.Values
+    protected IEnumerable<object> GetResources(World world, string profile) => world.Resources
       .Where(r => ECSSerializeAttribute.GetAttribute(r.GetType())?.Profile == profile);
 
     /// <summary>
@@ -43,10 +43,11 @@ namespace ManulECS {
     protected internal ComponentReader GetComponentReader(World world, string profile = null) =>
       new ComponentReader(world, profile);
 
-    protected internal struct ComponentReader {
+    protected internal ref struct ComponentReader {
       private World world;
       private string profile;
       private int current, previous, componentIndex;
+      private object component;
 
       ///<summary>Gets whether none of the entities have been processed yet.</summary>
       public bool IsFirst => previous == -1;
@@ -55,66 +56,67 @@ namespace ManulECS {
       public bool HasEntityChanged => current != previous;
 
       ///<summary>Gets the current Entity</summary>
-      public Entity Entity => world[(uint)current];
+      public Entity Entity => world.GetEntity((uint)current);
 
       ///<summary>Gets the current component from the current Entity.</summary>
-      public object Component { get; private set; }
+      public object Component => component;
 
       public ComponentReader(World world, string profile) {
         this.world = world;
         this.profile = profile;
         (current, previous, componentIndex) = (0, -1, -1);
-        Component = null;
+        component = null;
       }
 
       ///<summary>Reads the next entity and/or component.</summary>
       ///<returns>true if next component was found, false if reader has reached the end.</returns>
-      public bool Read() {
-        while (current < world.Capacity) {
-          var id = Entity.Id;
-          if (!Discard(id)) {
-            foreach (var idx in world.EntityKey(id)) {
-              // Skip already checked components
-              if (idx > componentIndex) {
-                var pool = world.PoolByKeyIndex(idx);
-                if (pool.omit != Omit.Component) {
-                  // Update previous only if we have actually looped components 
-                  if (componentIndex != -1) {
-                    previous = current;
-                  }
-                  componentIndex = idx;
-                  Component = pool.Get(id);
-                  return true;
+    public bool Read() {
+      var length = world.IdCount;
+      while (current < length) {
+        var id = Entity.Id;
+        if (!Discard(id)) {
+          foreach (var idx in world.GetEntityKey(id)) {
+            // Skip already checked components
+            if (idx > componentIndex) {
+              var pool = world.pools.RawPool(idx);
+              if (pool.omit != Omit.Component) {
+                // Update previous only if we have actually looped components 
+                if (componentIndex != -1) {
+                  previous = current;
                 }
+                componentIndex = idx;
+                component = pool.Get(id);
+                return true;
               }
             }
           }
-          // Update previous only if we have actually looped components 
-          if (componentIndex != -1) {
-            previous = current;
-          }
-          current++;
-          componentIndex = -1;
         }
-        return false;
+        // Update previous only if we have actually looped components 
+        if (componentIndex != -1) {
+          previous = current;
+        }
+        current++;
+        componentIndex = -1;
       }
+      return false;
+    }
 
-      private bool Discard(uint id) {
-        if (componentIndex != -1) return false;
-        if (!world.IsValid(id)) return true;
-        string componentProfile = null;
-        foreach (var idx in world.EntityKey(id)) {
-          var pool = world.PoolByKeyIndex(idx);
-          if (pool.omit == Omit.Entity) {
-            return true;
-          } else if (componentProfile == null) {
-            componentProfile = pool.profile;
-          } else if (pool.profile != null && componentProfile != pool.profile) {
-            throw new Exception("Entity has components belonging to different serialization profiles!");
-          }
+    private bool Discard(uint id) {
+      if (componentIndex != -1) return false;
+      if (!world.IsValid(id)) return true;
+      string componentProfile = null;
+      foreach (var idx in world.GetEntityKey(id)) {
+        var pool = world.pools.RawPool(idx);
+        if (pool.omit == Omit.Entity) {
+          return true;
+        } else if (componentProfile == null) {
+          componentProfile = pool.profile;
+        } else if (pool.profile != null && componentProfile != pool.profile) {
+          throw new Exception("Entity has components belonging to different serialization profiles!");
         }
-        return profile != componentProfile;
       }
+      return profile != componentProfile;
+    }
     }
   }
 }

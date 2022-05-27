@@ -20,7 +20,7 @@ namespace ManulECS.Benchmark {
       for (int i = 0; i < N * 100; i++) {
         entities.Add(
           world.Handle()
-          .Assign(new Pos { }).Assign(new Move { })
+          .Assign(new Comp1 { }).Assign(new Comp2 { })
           .Tag<Tag1>().Tag<Tag2>()
         );
       }
@@ -38,26 +38,34 @@ namespace ManulECS.Benchmark {
         world.Remove(entities[i]);
       }
     }
-    [Benchmark]
-    public void Remove1ComponentFromEntities() => Remove1<Pos>();
-    [Benchmark]
-    public void Remove2ComponentsFromEntities() => Remove2<Pos, Move>();
-    [Benchmark]
-    public void Remove1TagFromEntities() => Remove1<Tag1>();
-    [Benchmark]
-    public void Remove2TagFromEntities() => Remove2<Tag1, Tag2>();
 
-    private void Remove1<T>() where T : struct, IBaseComponent {
+    [Benchmark]
+    public void Remove1ComponentFromEntities() {
       for (int i = 0; i < N; i++) {
-        world.Remove<T>(entities[i]);
+        world.Remove<Comp1>(entities[i]);
       }
     }
-    private void Remove2<T1, T2>()
-      where T1 : struct, IBaseComponent
-      where T2 : struct, IBaseComponent {
+
+    [Benchmark]
+    public void Remove2ComponentsFromEntities() {
       for (int i = 0; i < N; i++) {
-        world.Remove<T1>(entities[i]);
-        world.Remove<T2>(entities[i]);
+        world.Remove<Comp1>(entities[i]);
+        world.Remove<Comp2>(entities[i]);
+      }
+    }
+
+    [Benchmark]
+    public void Remove1TagFromEntities() {
+      for (int i = 0; i < N; i++) {
+        world.Remove<Tag1>(entities[i]);
+      }
+    }
+
+    [Benchmark]
+    public void Remove2TagFromEntities() {
+      for (int i = 0; i < N; i++) {
+        world.Remove<Tag1>(entities[i]);
+        world.Remove<Tag2>(entities[i]);
       }
     }
   }

@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 
 namespace ManulECS {
   public abstract class Pool {
@@ -30,6 +31,7 @@ namespace ManulECS {
       Reset();
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ReadOnlySpan<uint> AsSpan() => ids.AsSpan(0, nextIndex);
 
     internal abstract bool Has(uint id);
@@ -41,6 +43,6 @@ namespace ManulECS {
 
     /// <summary>Sets a component without knowing its type at compile-time.</summary>
     /// <remarks>Used only in deserialization.</remarks>
-    internal abstract void SetObject(uint id, object component);
+    internal abstract void SetRaw(uint id, object component);
   }
 }
