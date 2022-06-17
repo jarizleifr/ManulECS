@@ -70,7 +70,7 @@ namespace ManulECS {
       } else {
         var (oldId, version) = entities[destroyed];
         (var id, destroyed) = (destroyed, oldId);
-        entityKeys[nextId] = default;
+        entityKeys[id] = default;
         return entities[id] = new Entity(id, version);
       }
     }
