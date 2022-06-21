@@ -228,6 +228,8 @@ serializer.Deserialize(world, json);
 
 There's a small limitation in deserialization - all components and resources need to belong to the same assembly. By default, the deserialization process looks for possible types to deserialize to in the entry assembly, but we can also customize the used assembly name.
 
+Customizing the assembly name is especially useful in automated testing, as many testing frameworks call internals from a separate test runner entry assembly.
+
 ```csharp
 var serializer = new JsonWorldSerializer() { AssemblyName = "SomeOtherAssembly" };
 ```
