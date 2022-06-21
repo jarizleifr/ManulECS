@@ -7,6 +7,9 @@ namespace ManulECS {
   internal sealed partial class Components {
     private Pool[] pools = new Pool[World.INITIAL_CAPACITY];
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool IsRegistered(int id) => id < pools.Length && pools[id] != null;
+
     /// <summary>Gets a raw Pool by its id.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Pool RawPool(int id) => pools[id];
