@@ -10,11 +10,6 @@ using System.Collections.Generic;
 namespace ManulECS {
   public record struct EntityMapping(uint Old, Entity Created);
 
-  public record JsonWorldSerializerOptions {
-    public string Namespace { get; init; } = null;
-    public string AssemblyName { get; init; } = Assembly.GetEntryAssembly().GetName().Name;
-  }
-
   public sealed class JsonWorldSerializer : WorldSerializer {
     public const string RESOURCES = "Resources";
     public const string ENTITIES = "Entities";
