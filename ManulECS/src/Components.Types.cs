@@ -35,7 +35,6 @@ namespace ManulECS {
     private static class Union<A, B, C, D, E, F, G, H> { internal readonly static Key key = Union<A, B, C, D, E, F, G>.key + Type<H>.key; }
 
     internal int GetId<T>() => Type<T>.id;
-    internal int GetId(Type type) => types.TryGetValue(type, out var id) ? id : MAX_INDEX;
 
     // Key accessors for any Tag/Component configuration, up to 8 different components.
     internal Key GetKey<T>() => Type<T>.key;
