@@ -221,7 +221,7 @@ namespace ManulECS {
       if (!views.TryGetValue(key, out View view)) {
         // If any of the components haven't been registered yet, return an empty View
         foreach (var idx in key) {
-          if (!pools.IsRegistered(idx)) return new View();
+          if (!pools.IsRegistered(idx)) return ManulECS.View.Empty;
         }
         view = new View(this, key);
         views.Add(key, view);

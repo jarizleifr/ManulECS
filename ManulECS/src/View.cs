@@ -5,14 +5,14 @@ using static ManulECS.ArrayUtil;
 namespace ManulECS {
   /// <summary>A view of entities, possessing the components specified in the key.</summary>
   public sealed class View {
+    internal readonly static View Empty = new View(null, new Key());
+
     private readonly Key key;
     private Entity[] entities = new Entity[World.INITIAL_CAPACITY];
 
     private int count = 0;
     private bool dirty = true;
     internal void SetToDirty() => dirty = true;
-
-    internal View() { }
 
     internal View(World world, Key key) {
       this.key = key;
