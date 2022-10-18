@@ -13,8 +13,8 @@ namespace ManulECS {
     private Entity[] entities = new Entity[INITIAL_CAPACITY];
     private Key[] entityKeys = new Key[INITIAL_CAPACITY];
 
-    private readonly Dictionary<Type, object> resources = new();
-    internal IEnumerable<object> Resources => resources.Values;
+    private readonly ResourceStore resources = new();
+    internal IEnumerable<object> Resources => resources;
 
     internal readonly Components pools = new();
     internal readonly Dictionary<Key, View> views = new();
@@ -201,17 +201,17 @@ namespace ManulECS {
     }
 
     /// <summary>Gets the resource of type T.</summary> 
-    public T GetResource<T>() where T : class => (T)resources[typeof(T)];
+    public T GetResource<T>() where T : class => resources.Get<T>();
 
     /// <summary>Removes the resource of type T from the registry.</summary>
-    public void ClearResource<T>() where T : class => resources.Remove(typeof(T));
+    public void ClearResource<T>() where T : class => resources.Remove<T>();
 
     /// <summary>Assigns or replaces the resource of type T in registry.</summary>
-    public void SetResource<T>(T resource) where T : class => resources[typeof(T)] = resource;
+    public void SetResource<T>(T resource) where T : class => resources.Set(resource);
 
     /// <summary>Assigns a Resource by its runtime type.</summary>
     /// <remarks>Used only for internal deserialization.</remarks>
-    internal void SetResource(Type type, object resource) => resources[type] = resource;
+    internal void SetResource(Type type, object resource) => resources.SetRaw(resource, type);
 
     internal bool ContainsView(Key key) => views.ContainsKey(key);
 
