@@ -1,53 +1,53 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using static ManulECS.ArrayUtil;
+using System.Runtime.InteropServices;
 
-namespace ManulECS {
-  /// <summary>A view of entities, possessing the components specified in the key.</summary>
-  public sealed class View {
-    internal readonly static View Empty = new View(null, new Key());
+namespace ManulECS;
 
-    private readonly Key key;
-    private Entity[] entities = new Entity[World.INITIAL_CAPACITY];
+/// <summary>A view of entities, possessing the components specified in the key.</summary>
+public sealed class View {
+  internal readonly static View Empty = new View(null, new Key());
 
-    private int count = 0;
-    private bool dirty = true;
-    internal void SetToDirty() => dirty = true;
+  private readonly Key key;
+  private List<Entity> entities = new(World.INITIAL_CAPACITY);
 
-    internal View(World world, Key key) {
-      this.key = key;
+  private bool dirty = true;
+  internal void SetToDirty() => dirty = true;
+
+  internal View(World world, Key key) {
+    this.key = key;
+    foreach (var idx in key) {
+      var pool = world.pools.RawPool(idx);
+      pool.OnUpdate += SetToDirty;
+    }
+  }
+
+  internal void Clear() {
+    entities.Clear();
+    dirty = true;
+  }
+
+  internal void Update(World world) {
+    if (dirty) {
+      Pool smallest = null;
       foreach (var idx in key) {
         var pool = world.pools.RawPool(idx);
-        pool.OnUpdate += SetToDirty;
+        if (smallest == null || smallest.Count > pool.Count) {
+          smallest = pool;
+        }
       }
-    }
-
-    internal void Clear() =>
-      (entities, count, dirty) = (new Entity[World.INITIAL_CAPACITY], 0, true);
-
-    internal void Update(World world) {
-      if (dirty) {
-        Pool smallest = null;
-        foreach (var idx in key) {
-          var pool = world.pools.RawPool(idx);
-          if (smallest == null || smallest.Count > pool.Count) {
-            smallest = pool;
-          }
+      entities.Clear();
+      foreach (var id in smallest.AsSpan()) {
+        if (world.GetEntityKey(id)[key]) {
+          entities.Add(world.GetEntity(id));
         }
-        count = 0;
-        if (entities.Length <= smallest.Count) {
-          ResizeAndFill(ref entities, smallest.Count, Entity.NULL_ENTITY);
-        }
-        foreach (var id in smallest.AsSpan()) {
-          if (world.GetEntityKey(id)[key]) {
-            entities[count++] = world.GetEntity(id);
-          }
-        }
-        dirty = false;
       }
+      dirty = false;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator ReadOnlySpan<Entity>(View view) => view.entities.AsSpan(0, view.count);
   }
+
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  public static implicit operator ReadOnlySpan<Entity>(View view) =>
+    CollectionsMarshal.AsSpan(view.entities);
 }
