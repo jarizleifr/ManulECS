@@ -116,12 +116,15 @@ namespace ManulECS {
 
     private (Type, object) DeserializeProperty(JsonProperty property) {
       var name = property.Name;
-      if (!typeCache.TryGetValue(name, out var type)) {
-        var typeName = Namespace == null ? $"{name}, {AssemblyName}" : $"{Namespace}.{name}, {AssemblyName}";
-        type = Type.GetType(typeName);
-        typeCache.Add(name, type);
+      // Lock cache so we don't get problems in multithreaded contexts
+      lock (typeCache) {
+        if (!typeCache.TryGetValue(name, out var type)) {
+          var typeName = Namespace == null ? $"{name}, {AssemblyName}" : $"{Namespace}.{name}, {AssemblyName}";
+          type = Type.GetType(typeName);
+          typeCache.Add(name, type);
+        }
+        return (type, property.Value.Deserialize(type, options));
       }
-      return (type, property.Value.Deserialize(type, options));
     }
   }
 }
